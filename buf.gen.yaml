@@ -1,0 +1,6 @@
+version: v1
+plugins:
+  - plugin: buf.build/protocolbuffers/python
+    out: lekko_client/gen
+  - plugin: buf.build/grpc/python
+    out: lekko_client/gen
