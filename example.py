@@ -1,5 +1,8 @@
 import argparse
 
+from google.protobuf import wrappers_pb2 as wrappers
+from google.protobuf.any_pb2 import Any as AnyProto
+
 from lekko_client import LEKKO_API_URL, LEKKO_SIDECAR_URL, Client
 from lekko_client.exceptions import LekkoError
 
@@ -8,11 +11,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--apikey", type=str)
     parser.add_argument("--sidecar", action="store_true")
-    parser.add_argument("--owner", type=str, default="lekkodev")
-    parser.add_argument("--repo", type=str, default="config-test")
-    parser.add_argument("--namespace", type=str, default="default")
-    parser.add_argument("--feature", type=str, default="example")
-    parser.add_argument("--feature-type", type=str, choices=["bool", "int", "float", "str", "json"], default="str")
+    parser.add_argument("--owner", type=str)
+    parser.add_argument("--repo", type=str)
+    parser.add_argument("--namespace", type=str)
+    parser.add_argument("--feature", type=str)
+    parser.add_argument("--feature-type", type=str, choices=["bool", "int", "float", "str", "json", "proto"], default="str")
+    parser.add_argument("--proto-type", type=str, default="")
     args = parser.parse_args()
 
     uri = LEKKO_SIDECAR_URL if args.sidecar else LEKKO_API_URL
@@ -30,6 +34,11 @@ if __name__ == "__main__":
             val = client.get_json(args.feature, {})
         elif args.feature_type == "float":
             val = client.get_float(args.feature, {})
+        elif args.feature_type == "proto":
+            msg_type = getattr(wrappers, args.proto_type, AnyProto)
+            val = client.get_proto(args.feature, {}, msg_type)
         print(f"Got {val} for feature")
     except LekkoError as e:
         print(f"Failed to get feature: {e}")
+        if e.__cause__:
+            print(f"Caused by: {e.__cause__}")

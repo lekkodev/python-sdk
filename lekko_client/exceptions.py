@@ -19,3 +19,7 @@ class FeatureNotFound(LekkoRpcError):
 
 class MismatchedType(LekkoRpcError):
     pass
+
+
+class MismatchedProtoType(LekkoError):
+    pass
