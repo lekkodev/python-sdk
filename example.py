@@ -3,7 +3,7 @@ import argparse
 from google.protobuf import wrappers_pb2 as wrappers
 from google.protobuf.any_pb2 import Any as AnyProto
 
-from lekko_client import LEKKO_API_URL, LEKKO_SIDECAR_URL, Client
+from lekko_client import APIClient, SidecarClient
 from lekko_client.exceptions import LekkoError
 
 
@@ -15,12 +15,17 @@ if __name__ == "__main__":
     parser.add_argument("--repo", type=str)
     parser.add_argument("--namespace", type=str)
     parser.add_argument("--feature", type=str)
-    parser.add_argument("--feature-type", type=str, choices=["bool", "int", "float", "str", "json", "proto"], default="str")
+    parser.add_argument(
+        "--feature-type",
+        type=str,
+        choices=["bool", "int", "float", "str", "json", "proto"],
+        default="str",
+    )
     parser.add_argument("--proto-type", type=str, default="")
     args = parser.parse_args()
 
-    uri = LEKKO_SIDECAR_URL if args.sidecar else LEKKO_API_URL
-    client = Client(uri, args.owner, args.repo, args.namespace, api_key=args.apikey)
+    client_cls = SidecarClient if args.sidecar else APIClient
+    client = client_cls(args.owner, args.repo, args.namespace, api_key=args.apikey)
 
     val = None
     try:
