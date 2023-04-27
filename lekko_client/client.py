@@ -4,6 +4,8 @@ from typing import Any, Dict, Optional, Tuple, Type, TypeVar
 import os
 
 import grpc
+from google.protobuf import descriptor_pool as proto_descriptor_pool, symbol_database
+from google.protobuf import symbol_database as proto_symbol_database
 from google.protobuf.any_pb2 import Any as AnyProto
 from google.protobuf.message import Message as ProtoMessage
 
@@ -71,6 +73,14 @@ class Client(ABC):
 
     @abstractmethod
     def get_proto(
+        self,
+        key: str,
+        context: Dict[str, Any],
+    ) -> ProtoMessage:
+        pass
+
+    @abstractmethod
+    def get_proto_by_type(
         self,
         key: str,
         context: Dict[str, Any],
@@ -151,7 +161,18 @@ class GRPCClient(Client):
     def get_json(self, key: str, context: Dict[str, Any]) -> dict:
         return self._get(key, context, dict)
 
-    def get_proto(
+    def get_proto(self, key: str, context: Dict[str, Any]) -> ProtoMessage:
+        val = self._get(key, context, AnyProto)
+        db = proto_symbol_database.SymbolDatabase(pool=proto_descriptor_pool.Default())
+        try:
+            ret_val = db.GetSymbol(val.type_url.split("/")[1])()
+            if val.Unpack(ret_val):
+                return ret_val
+        except (KeyError, IndexError):
+            pass
+        return val
+
+    def get_proto_by_type(
         self,
         key: str,
         context: Dict[str, Any],
@@ -160,7 +181,7 @@ class GRPCClient(Client):
         val = self._get(key, context, AnyProto)
         ret_val = proto_message_type()
         if val.Unpack(ret_val):
-            return ret_val.value
+            return ret_val
 
         raise MismatchedProtoType(
             f"Error unpacking from {val.type_url} to {proto_message_type.DESCRIPTOR.name}"

@@ -1,8 +1,5 @@
 import argparse
 
-from google.protobuf import wrappers_pb2 as wrappers
-from google.protobuf.any_pb2 import Any as AnyProto
-
 from lekko_client import APIClient, SidecarClient
 from lekko_client.exceptions import LekkoError
 
@@ -40,8 +37,15 @@ if __name__ == "__main__":
         elif args.feature_type == "float":
             val = client.get_float(args.feature, {})
         elif args.feature_type == "proto":
-            msg_type = getattr(wrappers, args.proto_type, AnyProto)
-            val = client.get_proto(args.feature, {}, msg_type)
+            # wrappers must be imported for both get_proto methods so that the proto symbol db can resolve
+            from google.protobuf import wrappers_pb2 as wrappers
+            from google.protobuf.any_pb2 import Any as AnyProto
+
+            if args.proto_type:
+                msg_type = getattr(wrappers, args.proto_type, AnyProto)
+                val = client.get_proto_by_type(args.feature, {}, msg_type).value
+            else:
+                val = client.get_proto(args.feature, {}).value
         print(f"Got {val} for feature")
     except LekkoError as e:
         print(f"Failed to get feature: {e}")
