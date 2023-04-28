@@ -1,6 +1,7 @@
 import argparse
 
 import grpc
+from google.protobuf.json_format import MessageToDict
 
 from lekko_client import APIClient, SidecarClient
 from lekko_client.exceptions import LekkoError
@@ -47,9 +48,9 @@ if __name__ == "__main__":
 
                 if args.proto_type:
                     msg_type = getattr(imported_proto, args.proto_type)
-                    val = client.get_proto_by_type(args.feature, {}, msg_type)
+                    val = MessageToDict(client.get_proto_by_type(args.feature, {}, msg_type))
                 else:
-                    val = client.get_proto(args.feature, {})
+                    val = MessageToDict(client.get_proto(args.feature, {}))
         print(f"Got {val} for feature")
     except LekkoError as e:
         print(f"Failed to get feature: {e}")
