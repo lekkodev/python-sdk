@@ -1,7 +1,7 @@
 import argparse
 
-from google.protobuf import wrappers_pb2 as wrappers
-from google.protobuf.any_pb2 import Any as AnyProto
+import grpc
+from google.protobuf.json_format import MessageToDict
 
 from lekko_client import APIClient, SidecarClient
 from lekko_client.exceptions import LekkoError
@@ -22,6 +22,7 @@ if __name__ == "__main__":
         default="str",
     )
     parser.add_argument("--proto-type", type=str, default="")
+    parser.add_argument("--proto-file", type=str)
     args = parser.parse_args()
 
     client_cls = SidecarClient if args.sidecar else APIClient
@@ -40,8 +41,16 @@ if __name__ == "__main__":
         elif args.feature_type == "float":
             val = client.get_float(args.feature, {})
         elif args.feature_type == "proto":
-            msg_type = getattr(wrappers, args.proto_type, AnyProto)
-            val = client.get_proto(args.feature, {}, msg_type)
+            if not args.proto_file:
+                print("Must provide a --proto-file. Could be a path or a well-known proto like 'google/protobuf/wrappers.proto'")
+            else:
+                imported_proto = grpc.protos(args.proto_file)
+
+                if args.proto_type:
+                    msg_type = getattr(imported_proto, args.proto_type)
+                    val = MessageToDict(client.get_proto_by_type(args.feature, {}, msg_type))
+                else:
+                    val = MessageToDict(client.get_proto(args.feature, {}))
         print(f"Got {val} for feature")
     except LekkoError as e:
         print(f"Failed to get feature: {e}")
