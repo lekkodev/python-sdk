@@ -1,7 +1,7 @@
 import concurrent.futures.thread
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import List, dataclass_transform
+from typing import List
 from unittest import mock
 
 import grpc
@@ -9,19 +9,7 @@ import grpc_testing
 import pytest
 from google.protobuf.message import Message as ProtoMessage
 
-from lekko_client.gen.lekko.client.v1beta1.configuration_service_pb2 import (
-    DESCRIPTOR,
-    GetBoolValueResponse,
-    GetFloatValueResponse,
-    GetIntValueResponse,
-    GetJSONValueResponse,
-    GetProtoValueResponse,
-    GetStringValueResponse,
-    RegisterResponse,
-)
-from lekko_client.gen.lekko.client.v1beta1.configuration_service_pb2_grpc import (
-    ConfigurationServiceServicer,
-)
+from lekko_client.gen.lekko.client.v1beta1.configuration_service_pb2 import DESCRIPTOR
 
 
 @pytest.fixture

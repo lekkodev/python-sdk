@@ -1,7 +1,5 @@
 import json
 
-from grpc import StatusCode
-
 from lekko_client.client import SidecarClient
 from lekko_client.gen.lekko.client.v1beta1 import configuration_service_pb2 as messages
 
@@ -17,7 +15,7 @@ def test_get_bool(test_server):
     client = SidecarClient("owner", "repo", "namespace", "lekko_apikey123")
     resp = client.get_bool("val", {})
 
-    assert resp == True
+    assert resp is True
 
 
 def test_get_int(test_server):
