@@ -9,7 +9,21 @@ on:
       - main
 
 jobs:
-  build:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: lint
+        run: make lint
+      - name: typecheck
+        run: make typecheck
+
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:

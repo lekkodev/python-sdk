@@ -12,6 +12,14 @@ venv/bin/touchfile: pyproject.toml
 test: venv
 	venv/bin/tox -p auto
 
+.PHONY: lint
+lint: venv
+	venv/bin/tox -e lint
+
+.PHONY: typecheck
+typecheck: venv
+	venv/bin/tox -e typecheck
+
 .PHONY: fmt
 fmt: venv
 	venv/bin/tox -e fmt
