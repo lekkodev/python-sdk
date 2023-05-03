@@ -18,8 +18,14 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
+          cache: 'pip'
+          cache-dependency-path: |
+            pyproject.toml
+            tox.ini
       - name: lint
         run: make lint
+      - name: typecheck
+        run: make typecheck
 
   test:
     runs-on: ubuntu-latest
@@ -43,5 +49,3 @@ jobs:
           python -m pip install tox tox-gh-actions
       - name: Test with tox
         run: tox
-      - name: typecheck
-        run: make typecheck
