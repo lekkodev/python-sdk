@@ -1,3 +1,21 @@
+PYTHON?=python
+
+.PHONY: venv
+venv: venv/bin/touchfile
+
+venv/bin/touchfile: pyproject.toml
+	@test -d venv || ${PYTHON} -m venv venv
+	. venv/bin/activate; pip install .[dev]
+	@touch venv/bin/touchfile
+
+.PHONY: test
+test: venv
+	venv/bin/tox -p auto
+
+.PHONY: fmt
+fmt: venv
+	venv/bin/tox -e fmt
+
 .PHONY: bufgen
 bufgen:
 	buf generate buf.build/lekkodev/sdk
