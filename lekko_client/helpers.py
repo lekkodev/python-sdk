@@ -42,10 +42,7 @@ class ApiKeyInterceptor(ClientInterceptor):
 _CHANNELS: Dict[Tuple[str, str], grpc.Channel] = {}
 
 
-def get_grpc_channel(
-    url: str, api_key: str, credentials: Optional[grpc.ChannelCredentials] = None
-) -> Tuple[grpc.Channel, bool]:
-    init = False
+def get_grpc_channel(url: str, api_key: str, credentials: Optional[grpc.ChannelCredentials] = None) -> grpc.Channel:
     if (url, api_key) not in _CHANNELS:
         if credentials:
             channel = grpc.secure_channel(url, credentials)
@@ -54,6 +51,5 @@ def get_grpc_channel(
 
         channel = grpc.intercept_channel(channel, *[ApiKeyInterceptor(api_key)])
         _CHANNELS[(url, api_key)] = channel
-        init = True
 
-    return _CHANNELS[(url, api_key)], init
+    return _CHANNELS[(url, api_key)]

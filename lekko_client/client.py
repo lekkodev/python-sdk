@@ -126,15 +126,14 @@ class GRPCClient(Client):
         if not self.api_key:
             raise AuthenticationError("Must provide API key and URI")
 
-        channel, init = get_grpc_channel(self.uri, self.api_key, credentials)
+        channel = get_grpc_channel(self.uri, self.api_key, credentials)
 
         self._client = ConfigurationServiceStub(channel)
-        if init:
-            try:
-                self._client.Register(RegisterRequest(repo_key=self.repository, namespace_list=[namespace]))
-            except grpc.RpcError:
-                # TODO:SAM - re-registering shouldn't cause errors in the future
-                pass
+        try:
+            self._client.Register(RegisterRequest(repo_key=self.repository, namespace_list=[namespace]))
+        except grpc.RpcError:
+            # TODO:SAM - re-registering shouldn't cause errors in the future
+            pass
 
     def get_bool(self, key: str, context: Dict[str, Any]) -> bool:
         return self._get(key, context, bool)

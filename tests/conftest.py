@@ -1,10 +1,13 @@
 import concurrent.futures.thread
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from typing import List, dataclass_transform
 from unittest import mock
 
 import grpc
 import grpc_testing
 import pytest
+from google.protobuf.message import Message as ProtoMessage
 
 from lekko_client.gen.lekko.client.v1beta1.configuration_service_pb2 import (
     DESCRIPTOR,
@@ -37,7 +40,7 @@ def test_thread():
 def test_channel(test_thread):
     channel = grpc_testing.channel(DESCRIPTOR.services_by_name.values(), grpc_testing.strict_real_time())
     try:
-        with mock.patch("lekko_client.client.get_grpc_channel", return_value=(channel, False)):
+        with mock.patch("lekko_client.client.get_grpc_channel", return_value=channel):
             yield channel
     finally:
         channel.close()
@@ -48,12 +51,23 @@ class MockServer:
         self.channel = channel
         self.thread = thread
 
-    def mock_async_response(self, fn_name, response, status_code=grpc.StatusCode.OK, error_text=""):
-        def server():
+    @dataclass
+    class MockRequestResponse:
+        fn_name: str
+        response: ProtoMessage
+        status_code = grpc.StatusCode.OK
+        error_text: str = ""
+
+    def mock_async_responses(self, mock_requests: List[MockRequestResponse]):
+        def server() -> List[ProtoMessage]:
             service = DESCRIPTOR.services_by_name["ConfigurationService"]
-            _, request, rpc = self.channel.take_unary_unary(service.methods_by_name[fn_name])
-            rpc.terminate(response, [], status_code, error_text)
-            return request
+            incoming_requests = []
+            for mock_request in mock_requests:
+                _, request, rpc = self.channel.take_unary_unary(service.methods_by_name[mock_request.fn_name])
+                rpc.terminate(mock_request.response, [], mock_request.status_code, mock_request.error_text)
+                incoming_requests.append(request)
+
+            return incoming_requests
 
         server_future = self.thread.submit(server)
         return server_future
