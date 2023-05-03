@@ -136,6 +136,9 @@ class GRPCClient(Client):
             pass
 
     def get_bool(self, key: str, context: Dict[str, Any]) -> bool:
+
+
+
         return self._get(key, context, bool)
 
     def get_int(self, key: str, context: Dict[str, Any]) -> int:
