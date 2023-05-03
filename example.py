@@ -6,7 +6,6 @@ from google.protobuf.json_format import MessageToDict
 from lekko_client import APIClient, SidecarClient
 from lekko_client.exceptions import LekkoError
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--apikey", type=str)
@@ -42,7 +41,9 @@ if __name__ == "__main__":
             val = client.get_float(args.feature, {})
         elif args.feature_type == "proto":
             if not args.proto_file:
-                print("Must provide a --proto-file. Could be a path or a well-known proto like 'google/protobuf/wrappers.proto'")
+                print(
+                    "Must provide a --proto-file. Could be a path or a well-known proto like 'google/protobuf/wrappers.proto'"
+                )
             else:
                 imported_proto = grpc.protos(args.proto_file)
 

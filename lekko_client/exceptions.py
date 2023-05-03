@@ -1,6 +1,3 @@
-from grpc import RpcError
-
-
 class LekkoError(Exception):
     pass
 

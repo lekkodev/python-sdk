@@ -1,0 +1,37 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "lekko_client"
+authors = [{name = "Sam Marcellus", email = "sam@lekko.com"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: Apache Software License"]
+dynamic = ["version", "description"]
+requires-python = ">=3.9"
+dependencies = [
+  'grpcio ~= 1.32',
+  'grpcio-tools ~= 1.32',
+  'grpc-interceptor ~= 0.15',
+]
+
+[project.optional-dependencies]
+dev = [
+  'tox ~= 4.5',
+]
+
+[project.urls]
+Home = "https://github.com/lekkodev/python-sdk"
+
+[tool.ruff]
+extend-exclude = ["gen"]
+line-length = 120
+
+[tool.black]
+extend-exclude = "/gen/"
+line-length = 120
+
+[tool.isort]
+profile = "black"
+skip_glob = ["*_pb2*.py*"]
