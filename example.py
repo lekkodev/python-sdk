@@ -12,13 +12,13 @@ if __name__ == "__main__":
     parser.add_argument("--sidecar", action="store_true")
     parser.add_argument("--owner", type=str)
     parser.add_argument("--repo", type=str)
-    parser.add_argument("--namespace", type=str)
-    parser.add_argument("--feature", type=str)
+    parser.add_argument("--namespace", type=str, default="default")
+    parser.add_argument("--feature", type=str, default="example")
     parser.add_argument(
         "--feature-type",
         type=str,
         choices=["bool", "int", "float", "str", "json", "proto"],
-        default="str",
+        default="bool",
     )
     parser.add_argument("--proto-type", type=str, default="")
     parser.add_argument("--proto-file", type=str)
@@ -52,7 +52,7 @@ if __name__ == "__main__":
                     val = MessageToDict(client.get_proto_by_type(args.feature, {}, msg_type))
                 else:
                     val = MessageToDict(client.get_proto(args.feature, {}))
-        print(f"Got {val} for feature")
+        print(f"Got {val} for feature {args.namespace}/{args.feature}")
     except LekkoError as e:
         print(f"Failed to get feature: {e}")
         if e.__cause__:
