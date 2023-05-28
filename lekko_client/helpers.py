@@ -17,7 +17,7 @@ def convert_context(context: dict) -> Dict[str, Value]:
         else:
             return Value(string_value=str(val))
 
-    return {k: convert_value(v) for k, v in context}
+    return {k: convert_value(v) for k, v in context.items()}
 
 
 class ApiKeyInterceptor(ClientInterceptor):
