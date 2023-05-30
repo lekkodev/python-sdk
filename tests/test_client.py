@@ -13,7 +13,7 @@ def test_get_bool(test_server):
     test_server.mock_async_responses(requests)
 
     client = SidecarClient("owner", "repo", "namespace", "lekko_apikey123")
-    resp = client.get_bool("val", {})
+    resp = client.get_bool("val", {"context": True})
 
     assert resp is True
 
@@ -27,7 +27,7 @@ def test_get_int(test_server):
     test_server.mock_async_responses(requests)
 
     client = SidecarClient("owner", "repo", "namespace", "lekko_apikey123")
-    resp = client.get_int("val", {})
+    resp = client.get_int("val", {"context": 5})
 
     assert resp == 10
 
@@ -41,7 +41,7 @@ def test_get_float(test_server):
     test_server.mock_async_responses(requests)
 
     client = SidecarClient("owner", "repo", "namespace", "lekko_apikey123")
-    resp = client.get_float("val", {})
+    resp = client.get_float("val", {"context": 2.5})
 
     assert resp == 1.5
 
@@ -54,7 +54,7 @@ def test_get_string(test_server):
     test_server.mock_async_responses(requests)
 
     client = SidecarClient("owner", "repo", "namespace", "lekko_apikey123")
-    resp = client.get_string("val", {})
+    resp = client.get_string("val", {"conext": "hello"})
 
     assert resp == "feature value"
 
