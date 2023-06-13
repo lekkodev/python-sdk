@@ -1,6 +1,6 @@
 """Lekko Python SDK Client"""
 
-__version__ = "0.1"
+__version__ = "0.1.1"
 
 LEKKO_API_URL = "prod.api.lekko.dev:443"
 LEKKO_SIDECAR_URL = "localhost:50051"
