@@ -10,7 +10,8 @@ venv/bin/touchfile: pyproject.toml
 
 .PHONY: test
 test: venv
-	venv/bin/tox -p auto
+	PYTHONPATH=. venv/bin/tox -p auto
+	venv/bin/tox -e report
 
 .PHONY: lint
 lint: venv

@@ -48,4 +48,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install tox tox-gh-actions
       - name: Test with tox
-        run: tox
+        run:  PYTHONPATH=. tox -p auto
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v3
+          env: CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

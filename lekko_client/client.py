@@ -52,23 +52,23 @@ class Client(ABC):
 
     @abstractmethod
     def get_bool(self, key: str, context: Dict[str, Any]) -> bool:
-        raise NotImplementedError
+        ...
 
     @abstractmethod
     def get_int(self, key: str, context: Dict[str, Any]) -> int:
-        raise NotImplementedError
+        ...
 
     @abstractmethod
     def get_float(self, key: str, context: Dict[str, Any]) -> float:
-        raise NotImplementedError
+        ...
 
     @abstractmethod
     def get_string(self, key: str, context: Dict[str, Any]) -> str:
-        raise NotImplementedError
+        ...
 
     @abstractmethod
     def get_json(self, key: str, context: Dict[str, Any]) -> dict:
-        pass
+        ...
 
     @abstractmethod
     def get_proto(
@@ -76,7 +76,7 @@ class Client(ABC):
         key: str,
         context: Dict[str, Any],
     ) -> ProtoMessage:
-        pass
+        ...
 
     @abstractmethod
     def get_proto_by_type(
@@ -85,7 +85,7 @@ class Client(ABC):
         context: Dict[str, Any],
         proto_message_type: Type[ProtoType],
     ) -> ProtoType:
-        pass
+        ...
 
 
 class GRPCClient(Client):
@@ -188,11 +188,10 @@ class GRPCClient(Client):
             response = getattr(self._client, fn_name)(req)
             return response.value
         except grpc.RpcError as e:
+            if e.code() == grpc.StatusCode.NOT_FOUND:
+                raise FeatureNotFound(e.details()) from e
             if e.code() == grpc.StatusCode.INVALID_ARGUMENT:
-                if "type mismatch" in (e.details() or ""):
-                    raise MismatchedType(e.details()) from e
-                elif "not found" in (e.details() or ""):
-                    raise FeatureNotFound(e.details()) from e
+                raise MismatchedType(e.details()) from e
             raise
 
 
