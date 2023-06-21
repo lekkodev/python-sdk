@@ -175,6 +175,33 @@ def test_errors(test_server_no_interceptor):
         client.get_bool("key", {})
 
 
+def test_proto_errors(test_server_no_interceptor):
+    requests = [
+        test_server_no_interceptor.MockRequestResponse("Register", messages.RegisterResponse),
+        test_server_no_interceptor.MockRequestResponse(
+            fn_name="GetProtoValue",
+            response=None,
+            status_code=grpc.StatusCode.NOT_FOUND,
+            error_text="get evaluable feature: first feature: record not found",
+        ),
+        test_server_no_interceptor.MockRequestResponse(
+            "GetProtoValue",
+            None,
+            grpc.StatusCode.INVALID_ARGUMENT,
+            "requested feature is not of type proto",
+        ),
+    ]
+
+    test_server_no_interceptor.mock_async_responses(requests)
+
+    client = SidecarClient("owner", "repo", "namespace", "lekko_apikey123")
+    with pytest.raises(FeatureNotFound):
+        client.get_proto("key", {})
+
+    with pytest.raises(MismatchedType):
+        client.get_proto("key", {})
+
+
 def test_get_api_client(test_server):
     requests = [
         test_server.MockRequestResponse("Register", messages.RegisterResponse),
