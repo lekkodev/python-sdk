@@ -190,6 +190,12 @@ def test_proto_errors(test_server_no_interceptor):
             grpc.StatusCode.INVALID_ARGUMENT,
             "requested feature is not of type proto",
         ),
+        test_server_no_interceptor.MockRequestResponse(
+            "GetProtoValue",
+            None,
+            grpc.StatusCode.INTERNAL,
+            "internal server error",
+        ),
     ]
 
     test_server_no_interceptor.mock_async_responses(requests)
@@ -199,6 +205,9 @@ def test_proto_errors(test_server_no_interceptor):
         client.get_proto("key", {})
 
     with pytest.raises(MismatchedType):
+        client.get_proto("key", {})
+
+    with pytest.raises(grpc.RpcError):
         client.get_proto("key", {})
 
 
