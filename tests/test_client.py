@@ -98,10 +98,15 @@ def test_get_proto(test_server):
     any_proto = Any()
     int_proto = wrappers_pb2.Int32Value(value=10)
     any_proto.Pack(int_proto)
+    lekko_any_proto = messages.Any(type_url=any_proto.type_url, value=any_proto.value)
     requests = [
         test_server.MockRequestResponse("Register", messages.RegisterResponse),
         test_server.MockRequestResponse("GetProtoValue", messages.GetProtoValueResponse(value=any_proto)),
         test_server.MockRequestResponse("GetProtoValue", messages.GetProtoValueResponse(value=any_proto)),
+        test_server.MockRequestResponse(
+            "GetProtoValue", messages.GetProtoValueResponse(value=any_proto, value_v2=lekko_any_proto)
+        ),
+        test_server.MockRequestResponse("GetProtoValue", messages.GetProtoValueResponse(value_v2=lekko_any_proto)),
     ]
     test_server.mock_async_responses(requests)
 
@@ -115,6 +120,14 @@ def test_get_proto(test_server):
     with mock.patch("google.protobuf.symbol_database.SymbolDatabase.GetSymbol", side_effect=KeyError):
         resp = client.get_proto("val", {})
         assert resp == any_proto
+
+    # test get proto with value and value_v2 being returned
+    resp = client.get_proto("val", {})
+    assert resp == int_proto
+
+    # test get proto with only value_v2 being returned
+    resp = client.get_proto("val", {})
+    assert resp == int_proto
 
 
 def test_missing_api_key(test_server):
