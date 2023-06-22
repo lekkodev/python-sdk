@@ -338,17 +338,39 @@ class GetProtoValueResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     VALUE_FIELD_NUMBER: builtins.int
+    VALUE_V2_FIELD_NUMBER: builtins.int
     @property
     def value(self) -> google.protobuf.any_pb2.Any: ...
+    @property
+    def value_v2(self) -> global___Any: ...
     def __init__(
         self,
         *,
         value: google.protobuf.any_pb2.Any | None = ...,
+        value_v2: global___Any | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["value", b"value"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["value", b"value"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["value", b"value", "value_v2", b"value_v2"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["value", b"value", "value_v2", b"value_v2"]) -> None: ...
 
 global___GetProtoValueResponse = GetProtoValueResponse
+
+@typing_extensions.final
+class Any(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    TYPE_URL_FIELD_NUMBER: builtins.int
+    VALUE_FIELD_NUMBER: builtins.int
+    type_url: builtins.str
+    value: builtins.bytes
+    def __init__(
+        self,
+        *,
+        type_url: builtins.str = ...,
+        value: builtins.bytes = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["type_url", b"type_url", "value", b"value"]) -> None: ...
+
+global___Any = Any
 
 @typing_extensions.final
 class GetJSONValueRequest(google.protobuf.message.Message):

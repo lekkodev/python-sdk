@@ -98,10 +98,15 @@ def test_get_proto(test_server):
     any_proto = Any()
     int_proto = wrappers_pb2.Int32Value(value=10)
     any_proto.Pack(int_proto)
+    lekko_any_proto = messages.Any(type_url=any_proto.type_url, value=any_proto.value)
     requests = [
         test_server.MockRequestResponse("Register", messages.RegisterResponse),
         test_server.MockRequestResponse("GetProtoValue", messages.GetProtoValueResponse(value=any_proto)),
         test_server.MockRequestResponse("GetProtoValue", messages.GetProtoValueResponse(value=any_proto)),
+        test_server.MockRequestResponse(
+            "GetProtoValue", messages.GetProtoValueResponse(value=any_proto, value_v2=lekko_any_proto)
+        ),
+        test_server.MockRequestResponse("GetProtoValue", messages.GetProtoValueResponse(value_v2=lekko_any_proto)),
     ]
     test_server.mock_async_responses(requests)
 
@@ -115,6 +120,14 @@ def test_get_proto(test_server):
     with mock.patch("google.protobuf.symbol_database.SymbolDatabase.GetSymbol", side_effect=KeyError):
         resp = client.get_proto("val", {})
         assert resp == any_proto
+
+    # test get proto with value and value_v2 being returned
+    resp = client.get_proto("val", {})
+    assert resp == int_proto
+
+    # test get proto with only value_v2 being returned
+    resp = client.get_proto("val", {})
+    assert resp == int_proto
 
 
 def test_missing_api_key(test_server):
@@ -160,6 +173,42 @@ def test_errors(test_server_no_interceptor):
 
     with pytest.raises(MismatchedType):
         client.get_bool("key", {})
+
+
+def test_proto_errors(test_server_no_interceptor):
+    requests = [
+        test_server_no_interceptor.MockRequestResponse("Register", messages.RegisterResponse),
+        test_server_no_interceptor.MockRequestResponse(
+            fn_name="GetProtoValue",
+            response=None,
+            status_code=grpc.StatusCode.NOT_FOUND,
+            error_text="get evaluable feature: first feature: record not found",
+        ),
+        test_server_no_interceptor.MockRequestResponse(
+            "GetProtoValue",
+            None,
+            grpc.StatusCode.INVALID_ARGUMENT,
+            "requested feature is not of type proto",
+        ),
+        test_server_no_interceptor.MockRequestResponse(
+            "GetProtoValue",
+            None,
+            grpc.StatusCode.INTERNAL,
+            "internal server error",
+        ),
+    ]
+
+    test_server_no_interceptor.mock_async_responses(requests)
+
+    client = SidecarClient("owner", "repo", "namespace", "lekko_apikey123")
+    with pytest.raises(FeatureNotFound):
+        client.get_proto("key", {})
+
+    with pytest.raises(MismatchedType):
+        client.get_proto("key", {})
+
+    with pytest.raises(grpc.RpcError):
+        client.get_proto("key", {})
 
 
 def test_get_api_client(test_server):

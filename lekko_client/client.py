@@ -152,7 +152,7 @@ class GRPCClient(Client):
         return json.loads(json_bytes.decode("utf-8"))
 
     def get_proto(self, key: str, context: Dict[str, Any]) -> ProtoMessage:
-        val = self._get(key, context, AnyProto)
+        val = self._get_proto(key, context)
         db = proto_symbol_database.SymbolDatabase(pool=proto_descriptor_pool.Default())
         try:
             ret_val = db.GetSymbol(val.type_url.split("/")[1])()
@@ -168,7 +168,7 @@ class GRPCClient(Client):
         context: Dict[str, Any],
         proto_message_type: Type[Client.ProtoType],
     ) -> Client.ProtoType:
-        val = self._get(key, context, AnyProto)
+        val = self._get_proto(key, context)
         ret_val = proto_message_type()
         if val.Unpack(ret_val):
             return ret_val
@@ -186,6 +186,29 @@ class GRPCClient(Client):
                 repo_key=self.repository,
             )
             response = getattr(self._client, fn_name)(req)
+            return response.value
+        except grpc.RpcError as e:
+            if e.code() == grpc.StatusCode.NOT_FOUND:
+                raise FeatureNotFound(e.details()) from e
+            if e.code() == grpc.StatusCode.INVALID_ARGUMENT:
+                raise MismatchedType(e.details()) from e
+            raise
+
+    def _get_proto(self, key: str, context: Dict[str, Any]) -> AnyProto:
+        ctx = self.context | context
+        try:
+            req = GetProtoValueRequest(
+                key=key,
+                context=convert_context(ctx),
+                namespace=self.namespace,
+                repo_key=self.repository,
+            )
+            response = self._client.GetProtoValue(req)
+            if response.value_v2.IsInitialized() and response.value_v2.type_url:
+                return AnyProto(
+                    type_url=response.value_v2.type_url,
+                    value=response.value_v2.value,
+                )
             return response.value
         except grpc.RpcError as e:
             if e.code() == grpc.StatusCode.NOT_FOUND:
