@@ -35,7 +35,9 @@ jobs:
       - name: Bump and tag version
         run: bump-my-version ${{ github.event.inputs.release_type}}
       - id: get_version
-        run: echo "release_version=$(bump-my-version show current_version)" >> $GITHUB_OUTPUT
+        run: |
+          RELEASE_VERSION=$(bump-my-version show current_version)
+          echo "release_version=$release_version" >> "$GITHUB_OUTPUT"
 
       - name: commit and push changes
         uses: stefanzweifel/git-auto-commit-action@v4
