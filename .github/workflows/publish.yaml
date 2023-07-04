@@ -1,0 +1,50 @@
+name: "Release"
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release Type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: 'Install dependencies'
+        # Pin pydantic - bump-my-version not compat with v > 2
+        run: |
+          pip install "pydantic<2.0.0"
+          pip install bump-my-version
+
+      - name: Bump and tag version
+        run: bump-my-version ${{ github.event.inputs.release_type}}
+      - id: get_version
+        run: |
+          RELEASE_VERSION=$(bump-my-version show current_version)
+          echo "release_version=$release_version" >> "$GITHUB_OUTPUT"
+
+      - name: commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Version ${{ steps.get_version.outputs.release_version }}"
+
+      - name: publish to pypi
+        run: |
+          pip install flit
+          flit publish

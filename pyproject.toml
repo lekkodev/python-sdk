@@ -35,3 +35,12 @@ line-length = 120
 [tool.isort]
 profile = "black"
 skip_glob = ["*_pb2*.py*"]
+
+[tool.bumpversion]
+current_version = "0.1.2"
+tag = true
+allow_dirty = true
+commit = true
+
+[[tool.bumpversion.files]]
+filename = "lekko_client/__init__.py"
