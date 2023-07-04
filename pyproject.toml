@@ -40,7 +40,7 @@ skip_glob = ["*_pb2*.py*"]
 current_version = "0.1.2"
 tag = true
 allow_dirty = true
-commit = true
+commit = false
 
 [[tool.bumpversion.files]]
 filename = "lekko_client/__init__.py"

@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   publish:
@@ -27,22 +28,23 @@ jobs:
           python-version: '3.11'
 
       - name: 'Install dependencies'
-        # Pin pydantic - bump-my-version not compat with v > 2
+        # Pin pydantic - bump-my-version incompat with v > 2
         run: |
           pip install "pydantic<2.0.0"
           pip install bump-my-version
 
       - name: Bump and tag version
-        run: bump-my-version ${{ github.event.inputs.release_type}}
-      - id: get_version
+        id: bump_version
         run: |
-          RELEASE_VERSION=$(bump-my-version show current_version)
-          echo "release_version=$release_version" >> "$GITHUB_OUTPUT"
+          echo "prev_version=$(bump-my-version show current_version)" >> "$GITHUB_OUTPUT"
+          bump-my-version ${{ github.event.inputs.release_type}}
+          echo "release_version=$(bump-my-version show current_version)" >> "$GITHUB_OUTPUT"
 
       - name: commit and push changes
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "Version ${{ steps.get_version.outputs.release_version }}"
+          commit_message: "Bump version ${{ steps.bump_version.outputs.prev_version }} → ${{ steps.bump_version.outputs.release_version }}"
+          tagging_message: "v${{ steps.bump_version.outputs.release_version}}"
 
       - name: publish to pypi
         run: |
