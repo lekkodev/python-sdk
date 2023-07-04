@@ -27,7 +27,7 @@ jobs:
           python-version: '3.11'
 
       - name: 'Install dependencies'
-        # Pin pydantic - my-version-bump not compat with v > 2
+        # Pin pydantic - bump-my-version not compat with v > 2
         run: |
           pip install "pydantic<2.0.0"
           pip install bump-my-version
