@@ -47,6 +47,9 @@ jobs:
           tagging_message: "v${{ steps.bump_version.outputs.release_version}}"
 
       - name: publish to pypi
+        env:
+          FLIT_USERNAME: ${{ secrets.FLIT_USERNAME }}
+          FLIT_PASSWORD: ${{ secrets.FLIT_PASSWORD }}
         run: |
           pip install flit
           flit publish
