@@ -27,6 +27,9 @@ fmt: venv
 
 .PHONY: bufgen
 bufgen:
-	buf generate buf.build/lekkodev/sdk
-	sed -i'.bak' -e 's/^from lekko.client.v1beta1/from ./' lekko_client/gen/lekko/client/v1beta1/*.py
-	rm lekko_client/gen/lekko/client/v1beta1/*.bak
+	buf generate buf.build/lekkodev/sdk --type lekko.client.v1beta1
+	buf generate buf.build/lekkodev/cli --type lekko.rules.v1beta3 --type lekko.feature.v1beta1
+	grep -rl "from lekko.\|import lekko.\|type: lekko." ./lekko_client/gen --include \*.py --include \*.pyi | xargs sed -i'.bak' -E -e 's/ lekko\./ lekko_client.gen.lekko./'
+	rm -f lekko_client/gen/lekko/client/v1beta1/*.bak
+	rm -f lekko_client/gen/lekko/feature/v1beta1/*.bak
+	rm -f lekko_client/gen/lekko/rules/v1beta3/*.bak
