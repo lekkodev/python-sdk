@@ -1,5 +1,5 @@
 import struct
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from google.protobuf.struct_pb2 import Value
 from xxhash import xxh32
@@ -116,7 +116,7 @@ def evaluate_string_comparator(
         raise ValueError("unexpected string comparison operator")
 
 
-def get_string(value: Value | LekkoValue) -> str:
+def get_string(value: Union[Value, LekkoValue]) -> str:
     if not value:
         raise ValueError("value is undefined")
 
@@ -144,7 +144,7 @@ def evaluate_number_comparator(
         raise ValueError("unexpected numerical comparison operator")
 
 
-def get_number(value: Value | LekkoValue) -> float:
+def get_number(value: Union[Value, LekkoValue]) -> float:
     value_kind = value.WhichOneof("kind")
     if value_kind in ["number_value", "int_value", "double_value"]:
         return float(getattr(value, value_kind))

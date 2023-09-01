@@ -12,6 +12,7 @@ from grpc_testing import _channel  # noqa
 
 from lekko_client import helpers
 from lekko_client.gen.lekko.client.v1beta1.configuration_service_pb2 import DESCRIPTOR
+from lekko_client.gen.lekko.feature.v1beta1.feature_pb2 import Feature
 
 
 @pytest.fixture
@@ -98,3 +99,13 @@ def test_server(test_channel, test_thread):
 @pytest.fixture
 def test_server_no_interceptor(test_channel_no_interceptor, test_thread):
     return MockServer(test_channel_no_interceptor, test_thread)
+
+
+@pytest.fixture
+def test_complex_rule_feature():
+    filename = "tests/fixtures/rules.proto.bin"
+    feature = Feature()
+    with open(filename, "rb") as f:
+        feature.ParseFromString(f.read())
+
+    return feature

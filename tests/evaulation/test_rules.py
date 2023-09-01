@@ -1,0 +1,76 @@
+import pytest
+
+from lekko_client.evaluation.rules import evaluate_rule
+from lekko_client.gen.lekko.rules.v1beta3.rules_pb2 import CallExpression, Rule
+from lekko_client.helpers import convert_context
+
+
+@pytest.mark.parametrize(
+    "context_val,namespace,config_name,expected",
+    [
+        (1, "ns_1", "feature_1", False),
+        (2, "ns_1", "feature_1", False),
+        (3, "ns_1", "feature_1", True),
+        (4, "ns_1", "feature_1", False),
+        (5, "ns_1", "feature_1", True),
+        (101, "ns_1", "feature_1", True),
+        (102, "ns_1", "feature_1", True),
+        (103, "ns_1", "feature_1", False),
+        (104, "ns_1", "feature_1", False),
+        (105, "ns_1", "feature_1", True),
+        (1, "ns_2", "feature_2", False),
+        (2, "ns_2", "feature_2", True),
+        (3, "ns_2", "feature_2", False),
+        (4, "ns_2", "feature_2", False),
+        (5, "ns_2", "feature_2", True),
+        (101, "ns_2", "feature_2", True),
+        (102, "ns_2", "feature_2", True),
+        (103, "ns_2", "feature_2", False),
+        (104, "ns_2", "feature_2", True),
+        (105, "ns_2", "feature_2", True),
+        (3.1415, "ns_1", "feature_1", False),
+        (2.7182, "ns_1", "feature_1", False),
+        (1.6180, "ns_1", "feature_1", True),
+        (6.6261, "ns_1", "feature_1", True),
+        (6.0221, "ns_1", "feature_1", False),
+        (2.9979, "ns_1", "feature_1", True),
+        (6.6730, "ns_1", "feature_1", False),
+        (1.3807, "ns_1", "feature_1", True),
+        (1.4142, "ns_1", "feature_1", True),
+        (2.0000, "ns_1", "feature_1", False),
+        (3.1415, "ns_2", "feature_2", True),
+        (2.7182, "ns_2", "feature_2", False),
+        (1.6180, "ns_2", "feature_2", True),
+        (6.6261, "ns_2", "feature_2", False),
+        (6.0221, "ns_2", "feature_2", False),
+        (2.9979, "ns_2", "feature_2", False),
+        (6.6730, "ns_2", "feature_2", False),
+        (1.3807, "ns_2", "feature_2", False),
+        (1.4142, "ns_2", "feature_2", True),
+        (2.0000, "ns_2", "feature_2", False),
+        ("hello", "ns_1", "feature_1", False),
+        ("world", "ns_1", "feature_1", False),
+        ("i", "ns_1", "feature_1", True),
+        ("am", "ns_1", "feature_1", True),
+        ("a", "ns_1", "feature_1", True),
+        ("unit", "ns_1", "feature_1", False),
+        ("test", "ns_1", "feature_1", True),
+        ("case", "ns_1", "feature_1", True),
+        ("for", "ns_1", "feature_1", False),
+        ("bucket", "ns_1", "feature_1", False),
+        ("hello", "ns_2", "feature_2", True),
+        ("world", "ns_2", "feature_2", False),
+        ("i", "ns_2", "feature_2", True),
+        ("am", "ns_2", "feature_2", True),
+        ("a", "ns_2", "feature_2", True),
+        ("unit", "ns_2", "feature_2", False),
+        ("test", "ns_2", "feature_2", True),
+        ("case", "ns_2", "feature_2", False),
+        ("for", "ns_2", "feature_2", False),
+        ("bucket", "ns_2", "feature_2", False),
+    ],
+)
+def test_bucket(context_val, namespace, config_name, expected):
+    rule = Rule(call_expression=CallExpression(bucket=CallExpression.Bucket(context_key="key", threshold=50000)))
+    context = convert_context({"key": context_val})
+    assert evaluate_rule(rule, namespace, config_name, context) == expected
