@@ -1,7 +1,15 @@
+from typing import Any
+
 import pytest
+from google.protobuf.struct_pb2 import Struct, Value
 
 from lekko_client.evaluation.rules import evaluate_rule
-from lekko_client.gen.lekko.rules.v1beta3.rules_pb2 import CallExpression, Rule
+from lekko_client.gen.lekko.rules.v1beta3.rules_pb2 import (
+    Atom,
+    CallExpression,
+    ComparisonOperator,
+    Rule,
+)
 from lekko_client.helpers import convert_context
 
 
@@ -74,3 +82,376 @@ def test_bucket(context_val, namespace, config_name, expected):
     rule = Rule(call_expression=CallExpression(bucket=CallExpression.Bucket(context_key="key", threshold=50000)))
     context = convert_context({"key": context_val})
     assert evaluate_rule(rule, namespace, config_name, context) == expected
+
+
+def test_bool_const():
+    for b in [True, False]:
+        rule = Rule(bool_const=b)
+        assert evaluate_rule(rule, "ns1", "config1") == b
+
+
+def test_present():
+    rule = Rule(atom=Atom(context_key="age", comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_PRESENT))
+    assert evaluate_rule(rule, "ns1", "config1") is False
+    assert evaluate_rule(rule, "ns1", "config1", convert_context({"age": 10})) is True
+    assert evaluate_rule(rule, "ns1", "config1", convert_context({"age": "not a number"})) is True
+
+
+def convert_to_value(v: Any) -> Value:
+    s = Struct()
+    s.update({"key": v})
+    return s.fields["key"]
+
+
+@pytest.mark.parametrize(
+    "test_atom,test_context,expected,raises",
+    [
+        (
+            Atom(
+                context_key="isprod",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                comparison_value=convert_to_value(True),
+            ),
+            convert_context({"isprod": True}),
+            True,
+            False,
+        ),
+        (
+            Atom(
+                context_key="isprod",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                comparison_value=convert_to_value(True),
+            ),
+            convert_context({"isprod": False}),
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="isprod",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                comparison_value=convert_to_value(True),
+            ),
+            convert_context({"isprod": "not a bool"}),
+            False,
+            True,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({"age": 12}),
+            True,
+            False,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({"age": 35}),
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({"age": 12.001}),
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                comparison_value=convert_to_value(12.001),
+            ),
+            convert_context({"age": 12.001}),
+            True,
+            False,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({"age": "not a number"}),
+            False,
+            True,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_NOT_EQUALS,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({"age": 25}),
+            True,
+            False,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_NOT_EQUALS,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({"age": 12}),
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({}),  # not present
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                comparison_value=convert_to_value("Rome"),
+            ),
+            convert_context({"city": "Rome"}),
+            True,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                comparison_value=convert_to_value("Rome"),
+            ),
+            convert_context({"city": "rome"}),
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                comparison_value=convert_to_value("Rome"),
+            ),
+            convert_context({"city": "Paris"}),
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                comparison_value=convert_to_value("Rome"),
+            ),
+            convert_context({"city": 99}),
+            False,
+            True,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_LESS_THAN,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({"age": 12}),
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_LESS_THAN,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({"age": 11}),
+            True,
+            False,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_LESS_THAN_OR_EQUALS,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({"age": 12}),
+            True,
+            False,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_GREATER_THAN_OR_EQUALS,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({"age": 12}),
+            True,
+            False,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_GREATER_THAN,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({"age": 12}),
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_GREATER_THAN,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({"age": 13}),
+            True,
+            False,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_GREATER_THAN,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({"age": "not a number"}),
+            False,
+            True,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_CONTAINED_WITHIN,
+                comparison_value=convert_to_value(["Rome", "Paris"]),
+            ),
+            convert_context({"city": "London"}),
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_CONTAINED_WITHIN,
+                comparison_value=convert_to_value(["Rome", "Paris"]),
+            ),
+            convert_context({"city": "Rome"}),
+            True,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_CONTAINED_WITHIN,
+                comparison_value=convert_to_value(["Rome", "Paris"]),
+            ),
+            convert_context({}),  # not present
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_CONTAINED_WITHIN,
+                comparison_value=convert_to_value(["Rome", "Paris"]),
+            ),
+            convert_context({"city": "rome"}),
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_STARTS_WITH,
+                comparison_value=convert_to_value("Ro"),
+            ),
+            convert_context({"city": "Rome"}),
+            True,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_STARTS_WITH,
+                comparison_value=convert_to_value("Ro"),
+            ),
+            convert_context({"city": "London"}),
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_STARTS_WITH,
+                comparison_value=convert_to_value("Ro"),
+            ),
+            convert_context({"city": "rome"}),
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_STARTS_WITH,
+                comparison_value=convert_to_value("Ro"),
+            ),
+            None,  # not present
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_ENDS_WITH,
+                comparison_value=convert_to_value("me"),
+            ),
+            convert_context({"city": "Rome"}),
+            True,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_ENDS_WITH,
+                comparison_value=convert_to_value("me"),
+            ),
+            convert_context({"city": "London"}),
+            False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_CONTAINS,
+                comparison_value=convert_to_value(""),
+            ),
+            convert_context({"city": "Rome"}),
+            True,
+            False,
+        ),
+        (
+            Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_CONTAINS,
+                comparison_value=convert_to_value("foo"),
+            ),
+            convert_context({"city": "Rome"}),
+            False,
+            False,
+        ),
+    ],
+)
+def test_atom(test_atom, test_context, expected, raises):
+    rule = Rule(atom=test_atom)
+    if raises:
+        with pytest.raises(Exception):
+            evaluate_rule(rule, "ns1", "config1", test_context)
+    else:
+        assert evaluate_rule(rule, "ns1", "config1", test_context) == expected

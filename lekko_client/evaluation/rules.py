@@ -161,7 +161,7 @@ def evaluate_contained_within(rule_value: Value, context_value: LekkoValue) -> b
     return any(evaluate_equals(list_elem_val, context_value) for list_elem_val in rule_value.list_value.values)
 
 
-def evaluate_bucket(bucket_f: CallExpression.Bucket, namespace: str, config_name: str, context: ClientContext):
+def evaluate_bucket(bucket_f: CallExpression.Bucket, namespace: str, config_name: str, context: ClientContext) -> bool:
     ctx_key = bucket_f.context_key
     value = context.get(ctx_key) if context else None
     if not value:
