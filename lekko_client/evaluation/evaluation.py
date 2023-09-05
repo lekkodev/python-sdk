@@ -10,7 +10,7 @@ from lekko_client.gen.lekko.feature.v1beta1.feature_pb2 import Constraint, Featu
 
 @dataclass
 class EvaluationResult:
-    value: Any
+    value: ProtoAny
     # Stores the path of the tree node that returned the final value
     # after successful evaluation.
     path: List[int]
