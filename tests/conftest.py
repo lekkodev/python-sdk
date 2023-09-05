@@ -1,18 +1,32 @@
 import concurrent.futures.thread
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Any, List, Tuple
 from unittest import mock
 
 import grpc
 import grpc_testing
 import pytest
+from google.protobuf.any_pb2 import Any as ProtoAny
 from google.protobuf.message import Message as ProtoMessage
+from google.protobuf.struct_pb2 import Struct, Value
+from google.protobuf.wrappers_pb2 import Int64Value
 from grpc_testing import _channel  # noqa
 
 from lekko_client import helpers
 from lekko_client.gen.lekko.client.v1beta1.configuration_service_pb2 import DESCRIPTOR
-from lekko_client.gen.lekko.feature.v1beta1.feature_pb2 import Feature
+from lekko_client.gen.lekko.feature.v1beta1.feature_pb2 import Any as LekkoAny
+from lekko_client.gen.lekko.feature.v1beta1.feature_pb2 import (
+    Constraint,
+    Feature,
+    FeatureType,
+    Tree,
+)
+from lekko_client.gen.lekko.rules.v1beta3.rules_pb2 import (
+    Atom,
+    ComparisonOperator,
+    Rule,
+)
 
 
 @pytest.fixture
@@ -109,3 +123,178 @@ def test_complex_rule_feature():
         feature.ParseFromString(f.read())
 
     return feature
+
+
+@pytest.fixture
+def test_feature_default_value() -> ProtoAny:
+    any_proto = ProtoAny()
+    any_proto.Pack(Int64Value(value=1))
+    return any_proto
+
+
+@pytest.fixture
+def test_feature_constraint_value() -> ProtoAny:
+    any_proto = ProtoAny()
+    any_proto.Pack(Int64Value(value=2))
+    return any_proto
+
+
+def convert_to_value(v: Any) -> Value:
+    s = Struct()
+    s.update({"key": v})
+    return s.fields["key"]
+
+
+@pytest.fixture
+def test_feature_no_constraints(test_feature_default_value) -> Feature:
+    return Feature(
+        key="key",
+        description="config description",
+        type=FeatureType.FEATURE_TYPE_INT,
+        tree=Tree(
+            default=test_feature_default_value,
+            default_new=LekkoAny(type_url=test_feature_default_value.type_url, value=test_feature_default_value.value),
+        ),
+    )
+
+
+@pytest.fixture
+def test_feature_one_level_traversal(test_feature_default_value, test_feature_constraint_value) -> Feature:
+    return Feature(
+        key="key",
+        description="config description",
+        type=FeatureType.FEATURE_TYPE_INT,
+        tree=Tree(
+            default=test_feature_default_value,
+            default_new=LekkoAny(type_url=test_feature_default_value.type_url, value=test_feature_default_value.value),
+            constraints=[
+                Constraint(
+                    rule_ast_new=Rule(
+                        atom=Atom(
+                            context_key="age",
+                            comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                            comparison_value=convert_to_value(10),
+                        )
+                    ),
+                    value=test_feature_constraint_value,
+                    value_new=LekkoAny(
+                        type_url=test_feature_constraint_value.type_url, value=test_feature_constraint_value.value
+                    ),
+                ),
+                Constraint(
+                    rule_ast_new=Rule(
+                        atom=Atom(
+                            context_key="age",
+                            comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                            comparison_value=convert_to_value(12),
+                        )
+                    ),
+                    value=test_feature_constraint_value,
+                    value_new=LekkoAny(
+                        type_url=test_feature_constraint_value.type_url, value=test_feature_constraint_value.value
+                    ),
+                ),
+            ],
+        ),
+    )
+
+
+@pytest.fixture
+def test_feature_two_level_traversal(test_feature_default_value, test_feature_constraint_value) -> Feature:
+    return Feature(
+        key="key",
+        description="config description",
+        type=FeatureType.FEATURE_TYPE_INT,
+        tree=Tree(
+            default=test_feature_default_value,
+            default_new=LekkoAny(type_url=test_feature_default_value.type_url, value=test_feature_default_value.value),
+            constraints=[
+                Constraint(
+                    rule_ast_new=Rule(
+                        atom=Atom(
+                            context_key="age",
+                            comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                            comparison_value=convert_to_value(10),
+                        )
+                    ),
+                    value=test_feature_constraint_value,
+                    value_new=LekkoAny(
+                        type_url=test_feature_constraint_value.type_url, value=test_feature_constraint_value.value
+                    ),
+                    constraints=[
+                        Constraint(
+                            rule_ast_new=Rule(
+                                atom=Atom(
+                                    context_key="city",
+                                    comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                                    comparison_value=convert_to_value("Rome"),
+                                )
+                            ),
+                            value=test_feature_constraint_value,
+                            value_new=LekkoAny(
+                                type_url=test_feature_constraint_value.type_url,
+                                value=test_feature_constraint_value.value,
+                            ),
+                        ),
+                        Constraint(
+                            rule_ast_new=Rule(
+                                atom=Atom(
+                                    context_key="city",
+                                    comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                                    comparison_value=convert_to_value("Paris"),
+                                )
+                            ),
+                            value=test_feature_constraint_value,
+                            value_new=LekkoAny(
+                                type_url=test_feature_constraint_value.type_url,
+                                value=test_feature_constraint_value.value,
+                            ),
+                        ),
+                    ],
+                ),
+                Constraint(
+                    rule_ast_new=Rule(
+                        atom=Atom(
+                            context_key="age",
+                            comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                            comparison_value=convert_to_value(12),
+                        )
+                    ),
+                    value=test_feature_constraint_value,
+                    value_new=LekkoAny(
+                        type_url=test_feature_constraint_value.type_url, value=test_feature_constraint_value.value
+                    ),
+                    constraints=[
+                        Constraint(
+                            rule_ast_new=Rule(
+                                atom=Atom(
+                                    context_key="city",
+                                    comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                                    comparison_value=convert_to_value("Rome"),
+                                )
+                            ),
+                            value=test_feature_constraint_value,
+                            value_new=LekkoAny(
+                                type_url=test_feature_constraint_value.type_url,
+                                value=test_feature_constraint_value.value,
+                            ),
+                        ),
+                        Constraint(
+                            rule_ast_new=Rule(
+                                atom=Atom(
+                                    context_key="city",
+                                    comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                                    comparison_value=convert_to_value("Paris"),
+                                )
+                            ),
+                            value=test_feature_constraint_value,
+                            value_new=LekkoAny(
+                                type_url=test_feature_constraint_value.type_url,
+                                value=test_feature_constraint_value.value,
+                            ),
+                        ),
+                    ],
+                ),
+            ],
+        ),
+    )

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from google.protobuf.any_pb2 import Any
+from google.protobuf.any_pb2 import Any as ProtoAny
 
 from lekko_client.evaluation.rules import ClientContext, evaluate_rule
 from lekko_client.gen.lekko.feature.v1beta1.feature_pb2 import Any as LekkoAny
@@ -18,13 +18,13 @@ class EvaluationResult:
 
 @dataclass
 class TraverseResult:
-    value: Optional[Any]
+    value: Optional[ProtoAny]
     passes: bool
     path: List[int]
 
 
 def evaluate(config: Feature, namespace: str, context: ClientContext = None) -> EvaluationResult:
-    if not config.tree:
+    if not config.HasField("tree"):
         raise ValueError("config tree is empty")
 
     for i, constraint in enumerate(config.tree.constraints):
@@ -52,9 +52,9 @@ def traverse(override: Constraint, namespace: str, config_name: str, context: Cl
     return TraverseResult(_get_any(override.value, override.value_new), True, [])
 
 
-def _get_any(val: Optional[Any], val_new: Optional[LekkoAny]) -> Any:
+def _get_any(val: Optional[ProtoAny], val_new: Optional[LekkoAny]) -> ProtoAny:
     if val_new and val_new.type_url:
-        return Any(type_url=val_new.type_url, value=val_new.value)
+        return ProtoAny(type_url=val_new.type_url, value=val_new.value)
     if val:
         return val
     raise ValueError("config value not found")
