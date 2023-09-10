@@ -19,7 +19,6 @@ class MemoryStore(Store):
         return result
 
     def load_impl(self, contents) -> bool:
-        super().load(contents)
         new_configs = {}
         for ns in contents.namespaces:
             namespace_map = {}

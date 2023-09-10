@@ -47,10 +47,10 @@ class CachedGitClient(CachedDistributionClient):
         credentials: grpc.ChannelCredentials = grpc.ssl_channel_credentials(),
         should_watch: Optional[bool] = True,
     ):
-        super().__init__(lekko_uri, repository_owner, repository_name, store, api_key, context, credentials)
         self.watcher: Optional[BaseObserver] = None
         self.path = path
         self.should_watch = should_watch
+        super().__init__(lekko_uri, repository_owner, repository_name, store, api_key, context, credentials)
 
     def initialize(self):
         super().initialize()
@@ -86,15 +86,16 @@ class CachedGitClient(CachedDistributionClient):
 
         features = []
         for proto_bin_file in glob.glob(os.path.join(proto_dir_path, "*.proto.bin")):
+            proto_bin_relative_filename = os.path.relpath(proto_bin_file, self.path)
             with open(proto_bin_file, "rb") as proto_bin:
                 _, sha = tree_lookup_path(
-                    repo.get_object, repo[repo.head()].tree, proto_bin_file.encode()  # type: ignore
+                    repo.get_object, repo[repo.head()].tree, proto_bin_relative_filename.encode()  # type: ignore
                 )
                 feature = Feature()
                 feature.ParseFromString(proto_bin.read())
                 features.append(
                     DistFeature(
-                        name=proto_bin_file.replace(".proto.bin", ""),
+                        name=os.path.basename(proto_bin_file).replace(".proto.bin", ""),
                         sha=sha.decode("utf-8"),
                         feature=feature,
                     )
