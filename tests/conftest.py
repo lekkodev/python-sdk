@@ -45,7 +45,7 @@ def test_thread():
 def test_channel_no_interceptor(test_thread):
     channel = grpc_testing.channel(DESCRIPTOR.services_by_name.values(), grpc_testing.strict_real_time())
     try:
-        with mock.patch("lekko_client.client.get_grpc_channel", return_value=channel):
+        with mock.patch("lekko_client.clients.grpc_client.get_grpc_channel", return_value=channel):
             yield channel
     finally:
         channel.close()
