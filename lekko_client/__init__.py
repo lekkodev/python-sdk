@@ -34,6 +34,7 @@ def initialize(
     repo_name: str,
     api_key: Optional[str] = None,
     context: Optional[Dict[str, Any]] = None,
+    git_repo_path: Optional[str] = None,
 ) -> Client:
     global __client
     if mode == Mode.API:
@@ -41,7 +42,9 @@ def initialize(
     elif mode == Mode.SIDECAR:
         __client = SidecarClient(owner_name, repo_name, api_key, context)
     elif mode == Mode.CACHED_GIT:
-        __client = CachedGitClient(LEKKO_API_URL, owner_name, repo_name, MemoryStore(), "", api_key, context)
+        if not git_repo_path:
+            raise ValueError("Must provide a path to git repo")
+        __client = CachedGitClient(LEKKO_API_URL, owner_name, repo_name, MemoryStore(), git_repo_path, api_key, context)
     elif mode == Mode.CACHED_SERVER:
         __client = CachedBackendClient(LEKKO_API_URL, owner_name, repo_name, MemoryStore(), api_key, context)
     else:
