@@ -46,7 +46,8 @@ class Store(ABC):
         return self._content_hash
 
     def should_update(self, contents: GetRepositoryContentsResponse, content_hash: str):
-        return contents.commit_sha != self.commit_sha or content_hash != self.content_hash
+        ret = contents.commit_sha != self.commit_sha or content_hash != self.content_hash
+        return ret
 
     @classmethod
     def sort_contents(cls, contents: GetRepositoryContentsResponse):

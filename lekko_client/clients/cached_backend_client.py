@@ -6,7 +6,9 @@ import grpc
 
 from lekko_client.clients.distribution_client import CachedDistributionClient
 from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
+    GetRepositoryContentsRequest,
     GetRepositoryContentsResponse,
+    GetRepositoryVersionRequest,
 )
 from lekko_client.stores.store import Store
 
@@ -53,7 +55,7 @@ class CachedBackendClient(CachedDistributionClient):
     def get_contents(self) -> Optional[GetRepositoryContentsResponse]:
         if not self._client:
             return None
-        return self._client.GetRepositoryContents(repo_key=self.repository, session_key=self.session_key)
+        return self._client.GetRepositoryContents(GetRepositoryContentsRequest(repo_key=self.repository, session_key=self.session_key))
 
     def update_store(self):
         self.load()
@@ -61,7 +63,7 @@ class CachedBackendClient(CachedDistributionClient):
     def should_update_store(self):
         if not self._client:
             return
-        version_response = self._client.GetRepositoryVersion(repo_key=self.repository, session_key=self.session_key)
+        version_response = self._client.GetRepositoryVersion(GetRepositoryVersionRequest(repo_key=self.repository, session_key=self.session_key))
         current_sha = self.store.commit_sha
         return current_sha != version_response.commit_sha
 
