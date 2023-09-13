@@ -56,14 +56,17 @@ class CachedDistributionClient(Client):
         def add_event(self, event: FlagEvaluationEvent):
             self.events.append(event)
 
+        def upload_events(self):
+            if self.events:
+                self.dist_client.SendFlagEvaluationMetrics(
+                    SendFlagEvaluationMetricsRequest(events=self.events, session_key=self.session_key)
+                )
+            self.events = []
+
         def run(self):
             # TODO: Lock
             while self._enabled:
-                if self.events:
-                    self.dist_client.SendFlagEvaluationMetrics(
-                        SendFlagEvaluationMetricsRequest(events=self.events, session_key=self.session_key)
-                    )
-                self.events = []
+                self.upload_events()
                 time.sleep(self.upload_interval / 1000)
 
         @classmethod
@@ -202,20 +205,8 @@ class CachedDistributionClient(Client):
 
         raise MismatchedProtoType(f"Error unpacking from {val.type_url} to {proto_message_type.DESCRIPTOR.name}")
 
-    # def track(self, namespace: str, key: str, result: StoredEvalResult, ctx: Optional[ClientContext] = None):
-    #    if not self.events_batcher:
-    #        return
-    #    self.events_batcher.track(FlagEvaluationEvent(
-    #        repo_key=self.repo_key,
-    #        commit_sha=result.commit_sha,
-    #        feature_sha=result.config_sha,
-    #        namespace_name=namespace,
-    #        feature_name=key,
-    #        context_keys=to_context_keys_proto(ctx),
-    #        result_path=result.eval_result.path,
-    #        client_event_time=Timestamp.now()
-    #    ))
-
     def close(self):
         if self._client and self.session_key:
+            self.events_batcher.upload_events()
+            self.events_batcher.stop()
             self._client.DeregisterClient(DeregisterClientRequest(session_key=self.session_key))
