@@ -1,5 +1,6 @@
 from typing import Dict
 
+from lekko_client.exceptions import FeatureNotFound, NamespaceNotFound
 from lekko_client.models import FeatureData
 from lekko_client.stores.store import Store
 
@@ -12,10 +13,10 @@ class MemoryStore(Store):
     def get(self, namespace: str, config_key: str) -> FeatureData:
         namespace_map = self.configs.get(namespace)
         if not namespace_map:
-            raise Exception("namespace not found")
+            raise NamespaceNotFound(f"Namespace {namespace} not found")
         result = namespace_map.get(config_key)
         if not result:
-            raise Exception("config not found")
+            raise FeatureNotFound(f"Feature {config_key} not found in namespace {namespace}")
         return result
 
     def load_impl(self, contents) -> bool:

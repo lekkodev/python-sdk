@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional, Type
 
 from google.protobuf.message import Message as ProtoMessage
 
+from lekko_client import exceptions
 from lekko_client.clients import (
     APIClient,
     CachedBackendClient,
@@ -13,7 +14,6 @@ from lekko_client.clients import (
     SidecarClient,
 )
 from lekko_client.constants import LEKKO_API_URL, LEKKO_SIDECAR_URL  # noqa
-from lekko_client.exceptions import *  # noqa
 from lekko_client.stores import MemoryStore
 
 __version__ = "0.1.4"
@@ -43,12 +43,12 @@ def initialize(
         __client = SidecarClient(owner_name, repo_name, api_key, context)
     elif mode == Mode.CACHED_GIT:
         if not git_repo_path:
-            raise ValueError("Must provide a path to git repo")
+            raise exceptions.GitRepoNotFound("Must provide a path to git repo in Cached Git mode")
         __client = CachedGitClient(LEKKO_API_URL, owner_name, repo_name, MemoryStore(), git_repo_path, api_key, context)
     elif mode == Mode.CACHED_SERVER:
         __client = CachedBackendClient(LEKKO_API_URL, owner_name, repo_name, MemoryStore(), api_key, context)
     else:
-        raise ValueError("Invalid mode")
+        raise exceptions.LekkoError("Unknown client mode")
     return __client
 
 

@@ -4,6 +4,7 @@ from typing import List, Optional
 from google.protobuf.any_pb2 import Any as ProtoAny
 
 from lekko_client.evaluation.rules import ClientContext, evaluate_rule
+from lekko_client.exceptions import EvaluationError
 from lekko_client.gen.lekko.feature.v1beta1.feature_pb2 import Any as LekkoAny
 from lekko_client.gen.lekko.feature.v1beta1.feature_pb2 import Constraint, Feature
 
@@ -25,7 +26,7 @@ class TraverseResult:
 
 def evaluate(config: Feature, namespace: str, context: ClientContext = None) -> EvaluationResult:
     if not config.HasField("tree"):
-        raise ValueError("config tree is empty")
+        raise EvaluationError("Unable to evaluate feature: config tree is empty")
 
     for i, constraint in enumerate(config.tree.constraints):
         child_result = traverse(constraint, namespace, config.key, context)
@@ -57,4 +58,4 @@ def _get_any(val: Optional[ProtoAny], val_new: Optional[LekkoAny]) -> ProtoAny:
         return ProtoAny(type_url=val_new.type_url, value=val_new.value)
     if val:
         return val
-    raise ValueError("config value not found")
+    raise EvaluationError("Constraint or default value is empty")

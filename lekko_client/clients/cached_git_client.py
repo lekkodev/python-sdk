@@ -12,6 +12,7 @@ from watchdog.observers import Observer
 from watchdog.observers.api import BaseObserver
 
 from lekko_client.clients.distribution_client import CachedDistributionClient
+from lekko_client.exceptions import GitRepoNotFound
 from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
     Feature as DistFeature,
 )
@@ -65,7 +66,7 @@ class CachedGitClient(CachedDistributionClient):
         try:
             repo = GitRepo(self.path)
         except NotGitRepository:
-            raise ValueError("Not a git repository")
+            raise GitRepoNotFound(f"{self.path} is not a git repository")
 
         return GetRepositoryContentsResponse(
             commit_sha=repo.head().decode("utf-8"), namespaces=self.get_namespaces(repo)

@@ -18,7 +18,7 @@ from google.protobuf.wrappers_pb2 import BoolValue, FloatValue, Int64Value, Stri
 from lekko_client.clients.client import Client
 from lekko_client.evaluation.evaluation import EvaluationResult, evaluate
 from lekko_client.evaluation.rules import ClientContext
-from lekko_client.exceptions import MismatchedProtoType
+from lekko_client.exceptions import MismatchedProtoType, MismatchedType
 from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
     ContextKey,
     DeregisterClientRequest,
@@ -41,11 +41,11 @@ from lekko_client.stores.store import Store
 
 class CachedDistributionClient(Client):
     class EventsBatcher(Thread):
-        def __init__(self, dist_client: DistributionServiceStub, session_key: str, upload_interval: int):
+        def __init__(self, dist_client: DistributionServiceStub, session_key: str, upload_interval_ms: int):
             super().__init__()
             self.daemon = True
             self.dist_client = dist_client
-            self.upload_interval = upload_interval
+            self.upload_interval = upload_interval_ms
             self.session_key = session_key
             self.events: List[FlagEvaluationEvent] = []
             self._enabled = True
@@ -67,7 +67,7 @@ class CachedDistributionClient(Client):
             # TODO: Lock
             while self._enabled:
                 self.upload_events()
-                time.sleep(self.upload_interval / 1000)
+                time.sleep(self.upload_interval)
 
         @classmethod
         def get_value_type(cls, val: LekkoValue) -> str:
@@ -104,7 +104,7 @@ class CachedDistributionClient(Client):
                 RegisterClientRequest(repo_key=self.repository, sidecar_version=__version__)
             )
             self.session_key = register_response.session_key
-            self.events_batcher = self.EventsBatcher(self._client, self.session_key, 15)
+            self.events_batcher = self.EventsBatcher(self._client, self.session_key, 15 * 1000)
             self.events_batcher.start()
 
         self.initialize()
@@ -159,8 +159,9 @@ class CachedDistributionClient(Client):
     def _get_scalar(self, namespace: str, key: str, context: Dict[str, Any], typ: Type[ReturnType]) -> ReturnType:
         result = self._get(namespace, key, context)
         return_wrapper = self._TYPE_MAPPING[typ]()
-        result.Unpack(return_wrapper)
-        return return_wrapper.value  # type:ignore
+        if result.Unpack(return_wrapper):
+            return return_wrapper.value  # type:ignore
+        raise MismatchedType(f"Feature {key} is of type {result.type_url} and cannot be converted to {typ}")
 
     def get_bool(self, namespace: str, key: str, context: Dict[str, Any]) -> bool:
         return self._get_scalar(namespace, key, context, bool)

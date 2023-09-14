@@ -15,11 +15,11 @@ from lekko_client.stores.store import Store
 
 class CachedBackendClient(CachedDistributionClient):
     class RefreshThread(Thread):
-        def __init__(self, client: "CachedBackendClient", refresh_interval: int):
+        def __init__(self, client: "CachedBackendClient", refresh_interval_ms: int):
             super().__init__()
             self.daemon = True
             self.client = client
-            self.refresh_interval = refresh_interval
+            self.refresh_interval = refresh_interval_ms
             self._enabled = True
 
         def stop(self):
@@ -43,14 +43,13 @@ class CachedBackendClient(CachedDistributionClient):
     ):
         self.timeout = None
         self.closed = False
-        self.update_interval = 1000
+        self.update_interval_ms = 1000
         super().__init__(uri, owner_name, repo_name, store, api_key, context, credentials)
 
     def initialize(self):
         self.update_store()
-        if self.update_interval:
-            self.refresh_thread = CachedBackendClient.RefreshThread(self, self.update_interval)
-            self.refresh_thread.start()
+        self.refresh_thread = CachedBackendClient.RefreshThread(self, self.update_interval_ms)
+        self.refresh_thread.start()
 
     def get_contents(self) -> Optional[GetRepositoryContentsResponse]:
         if not self._client:

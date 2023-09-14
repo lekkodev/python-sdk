@@ -4,6 +4,7 @@ from typing import Dict, Optional, Union
 from google.protobuf.struct_pb2 import Value
 from xxhash import xxh32
 
+from lekko_client.exceptions import EvaluationError
 from lekko_client.gen.lekko.client.v1beta1.configuration_service_pb2 import (
     Value as LekkoValue,
 )
@@ -19,11 +20,11 @@ ClientContext = Optional[Dict[str, LekkoValue]]
 
 def evaluate_rule(rule: Rule, namespace: str, config_name: str, context: ClientContext = None) -> bool:
     if not rule:
-        raise ValueError("empty rule")
+        raise EvaluationError("Empty rule")
 
     rule_type = rule.WhichOneof("rule")
     if not rule_type:
-        raise ValueError("empty rule")
+        raise EvaluationError("Empty rule")
 
     rule_value = getattr(rule, rule_type)
 
@@ -33,7 +34,7 @@ def evaluate_rule(rule: Rule, namespace: str, config_name: str, context: ClientC
         return not evaluate_rule(rule_value, namespace, config_name, context)
     elif rule_type == "logical_expression":
         if not rule_value.rules:
-            raise ValueError("no rules found in logical expression")
+            raise EvaluationError("No rules found in logical expression")
 
         logical_operator = rule_value.logical_operator
         return (
@@ -75,27 +76,27 @@ def evaluate_rule(rule: Rule, namespace: str, config_name: str, context: ClientC
                 rule_value.comparison_operator, rule_value.comparison_value, context_value
             )
         else:
-            raise ValueError("unknown comparison operator")
+            raise EvaluationError("Unknown comparison operator")
     elif rule_type == "call_expression":
         if rule_value.WhichOneof("function") == "bucket":
             return evaluate_bucket(rule_value.bucket, namespace, config_name, context)
         else:
-            raise ValueError("unknown function type")
+            raise EvaluationError("Unknown CallExpression function type")
     else:
-        raise ValueError("unknown rule type")
+        raise EvaluationError("Unknown rule type")
 
 
 def evaluate_equals(rule_value: Value, context_value: LekkoValue) -> bool:
     rule_kind = rule_value.WhichOneof("kind") or ""
     context_kind = context_value.WhichOneof("kind") or ""
     if rule_kind not in ["bool_value", "string_value", "number_value"]:
-        raise ValueError("unsupported type for equals operator")
+        raise EvaluationError("Unsupported rule type for equals operator")
 
     if rule_kind == "number_value":
         if context_kind not in ["double_value", "int_value"]:
-            raise ValueError("type mismatch")
+            raise EvaluationError("Type mismatch in equals operator rule")
     elif rule_kind != context_kind:
-        raise ValueError("type mismatch")
+        raise EvaluationError("Type mismatch in equals operator rule")
 
     return getattr(rule_value, rule_kind) == getattr(context_value, context_kind)
 
@@ -113,17 +114,17 @@ def evaluate_string_comparator(
     elif comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_CONTAINS:
         return rule_str in context_str
     else:
-        raise ValueError("unexpected string comparison operator")
+        raise EvaluationError("Unknown string comparison operator")
 
 
 def get_string(value: Union[Value, LekkoValue]) -> str:
     if not value:
-        raise ValueError("value is undefined")
+        raise EvaluationError("String Value is undefined")
 
     if value.WhichOneof("kind") == "string_value":
         return value.string_value
     else:
-        raise ValueError("value is not a string")
+        raise EvaluationError("get_string called with non-string Value")
 
 
 def evaluate_number_comparator(
@@ -141,7 +142,7 @@ def evaluate_number_comparator(
     elif comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_GREATER_THAN_OR_EQUALS:
         return context_num >= rule_num
     else:
-        raise ValueError("unexpected numerical comparison operator")
+        raise EvaluationError("Unknown numerical comparison operator")
 
 
 def get_number(value: Union[Value, LekkoValue]) -> float:
@@ -149,12 +150,12 @@ def get_number(value: Union[Value, LekkoValue]) -> float:
     if value_kind in ["number_value", "int_value", "double_value"]:
         return float(getattr(value, value_kind))
     else:
-        raise ValueError("value is not a number")
+        raise EvaluationError("get_number caled with non-numeric Value")
 
 
 def evaluate_contained_within(rule_value: Value, context_value: LekkoValue) -> bool:
     if rule_value.WhichOneof("kind") != "list_value":
-        raise ValueError("type mismatch: expecting list for operator contained within")
+        raise EvaluationError("Contained within operator must use a list value")
 
     # TODO: this will throw if there's a type mismatch, which means that all items in rule list must be of same type
     # This is consistent with other language SDKs, but we should consider just returning False on type mismatch
@@ -182,7 +183,7 @@ def evaluate_bucket(bucket_f: CallExpression.Bucket, namespace: str, config_name
     elif value_kind == "double_value":
         bytes_buffer = struct.pack(">d", value_val)
     else:
-        raise ValueError("unsupported value type for bucket")
+        raise EvaluationError("Unsupported value type for bucket")
 
     bytes_frags = [bytes(namespace, "utf-8"), bytes(config_name, "utf-8"), bytes(ctx_key, "utf-8"), bytes_buffer]
     result = xxh32(b"".join(bytes_frags), 0).intdigest()

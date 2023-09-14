@@ -106,4 +106,4 @@ def test_eval(
         assert result.value == expected
         assert result.path == expected_path
     else:
-        raise ValueError("test case needs to either expect an error or a result")
+        assert not "test case needs to either expect an error or a result"
