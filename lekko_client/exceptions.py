@@ -32,3 +32,7 @@ class EvaluationError(LekkoError):
 
 class GitRepoNotFound(LekkoError):
     pass
+
+
+class ClientNotInitialized(LekkoError):
+    pass

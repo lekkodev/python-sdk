@@ -3,7 +3,7 @@ import time
 from abc import abstractmethod
 from datetime import datetime
 from threading import Thread
-from typing import Any, Dict, List, Optional, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 import grpc
 from google.protobuf import descriptor_pool as proto_descriptor_pool
@@ -109,7 +109,7 @@ class CachedDistributionClient(Client):
 
         self.initialize()
 
-    _TYPE_MAPPING: Dict[Type, Type[Union[BoolValue, Int64Value, StringValue, FloatValue]]] = {
+    _TYPE_MAPPING: Dict[Type, Type[BoolValue | Int64Value | StringValue | FloatValue]] = {
         bool: BoolValue,
         int: Int64Value,
         str: StringValue,
@@ -121,14 +121,14 @@ class CachedDistributionClient(Client):
         ...
 
     def load(self) -> bool:
-        contents = self.get_contents()
+        contents = self.load_contents()
         if not contents:
             return False
         loaded = self.store.load(contents)
         return loaded
 
     @abstractmethod
-    def get_contents(self) -> Optional[GetRepositoryContentsResponse]:
+    def load_contents(self) -> Optional[GetRepositoryContentsResponse]:
         ...
 
     def track(
@@ -148,7 +148,7 @@ class CachedDistributionClient(Client):
         )
         self.events_batcher.add_event(event)
 
-    def _get(self, namespace: str, key: str, context: Dict[str, Any]) -> ProtoAny:
+    def get(self, namespace: str, key: str, context: Dict[str, Any]) -> ProtoAny:
         feature_data = self.store.get(namespace, key)
         result = evaluate(feature_data.feature, namespace, convert_context(context))
         self.track(namespace, feature_data, result, context)
@@ -156,33 +156,33 @@ class CachedDistributionClient(Client):
 
     ReturnType = TypeVar("ReturnType", str, float, int, bool)
 
-    def _get_scalar(self, namespace: str, key: str, context: Dict[str, Any], typ: Type[ReturnType]) -> ReturnType:
-        result = self._get(namespace, key, context)
+    def get_scalar(self, namespace: str, key: str, context: Dict[str, Any], typ: Type[ReturnType]) -> ReturnType:
+        result = self.get(namespace, key, context)
         return_wrapper = self._TYPE_MAPPING[typ]()
         if result.Unpack(return_wrapper):
             return return_wrapper.value  # type:ignore
         raise MismatchedType(f"Feature {key} is of type {result.type_url} and cannot be converted to {typ}")
 
     def get_bool(self, namespace: str, key: str, context: Dict[str, Any]) -> bool:
-        return self._get_scalar(namespace, key, context, bool)
+        return self.get_scalar(namespace, key, context, bool)
 
     def get_int(self, namespace: str, key: str, context: Dict[str, Any]) -> int:
-        return self._get_scalar(namespace, key, context, int)
+        return self.get_scalar(namespace, key, context, int)
 
     def get_float(self, namespace: str, key: str, context: Dict[str, Any]) -> float:
-        return self._get_scalar(namespace, key, context, float)
+        return self.get_scalar(namespace, key, context, float)
 
     def get_string(self, namespace: str, key: str, context: Dict[str, Any]) -> str:
-        return self._get_scalar(namespace, key, context, str)
+        return self.get_scalar(namespace, key, context, str)
 
     def get_json(self, namespace: str, key: str, context: Dict[str, Any]) -> Any:
-        result = self._get(namespace, key, context)
+        result = self.get(namespace, key, context)
         return_wrapper = Value()
         result.Unpack(return_wrapper)
         return json.loads(MessageToJson(return_wrapper))
 
     def get_proto(self, namespace: str, key: str, context: Dict[str, Any]) -> ProtoMessage:
-        val = self._get(namespace, key, context)
+        val = self.get(namespace, key, context)
         db = proto_symbol_database.SymbolDatabase(pool=proto_descriptor_pool.Default())
         try:
             ret_val = db.GetSymbol(val.type_url.split("/")[1])()
@@ -199,7 +199,7 @@ class CachedDistributionClient(Client):
         context: Dict[str, Any],
         proto_message_type: Type[Client.ProtoType],
     ) -> Client.ProtoType:
-        val = self._get(namespace, key, context)
+        val = self.get(namespace, key, context)
         ret_val = proto_message_type()
         if val.Unpack(ret_val):
             return ret_val
@@ -207,6 +207,7 @@ class CachedDistributionClient(Client):
         raise MismatchedProtoType(f"Error unpacking from {val.type_url} to {proto_message_type.DESCRIPTOR.name}")
 
     def close(self):
+        super().close()
         if self._client and self.session_key:
             self.events_batcher.upload_events()
             self.events_batcher.stop()

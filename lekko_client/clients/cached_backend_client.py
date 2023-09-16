@@ -1,10 +1,12 @@
 import time
-from threading import Thread
+from threading import Event, Thread
 from typing import Any, Dict, Optional
 
 import grpc
+from google.protobuf.any_pb2 import Any as ProtoAny
 
 from lekko_client.clients.distribution_client import CachedDistributionClient
+from lekko_client.exceptions import ClientNotInitialized
 from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
     GetRepositoryContentsRequest,
     GetRepositoryContentsResponse,
@@ -41,17 +43,18 @@ class CachedBackendClient(CachedDistributionClient):
         context: Optional[Dict[str, Any]] = None,
         credentials: grpc.ChannelCredentials = grpc.ssl_channel_credentials(),
     ):
+        super().__init__(uri, owner_name, repo_name, store, api_key, context, credentials)
         self.timeout = None
         self.closed = False
         self.update_interval_ms = 1000
-        super().__init__(uri, owner_name, repo_name, store, api_key, context, credentials)
+        self.initialized_event = Event()
 
     def initialize(self):
-        self.update_store()
+        super().initialize()
         self.refresh_thread = CachedBackendClient.RefreshThread(self, self.update_interval_ms)
         self.refresh_thread.start()
 
-    def get_contents(self) -> Optional[GetRepositoryContentsResponse]:
+    def load_contents(self) -> Optional[GetRepositoryContentsResponse]:
         if not self._client:
             return None
         return self._client.GetRepositoryContents(
@@ -60,10 +63,13 @@ class CachedBackendClient(CachedDistributionClient):
 
     def update_store(self):
         self.load()
+        self.initialized_event.set()
 
-    def should_update_store(self):
+    def should_update_store(self) -> bool:
         if not self._client:
-            return
+            return False
+        if not self.initialized_event.is_set():
+            return True
         version_response = self._client.GetRepositoryVersion(
             GetRepositoryVersionRequest(repo_key=self.repository, session_key=self.session_key)
         )
@@ -73,3 +79,9 @@ class CachedBackendClient(CachedDistributionClient):
     def close(self):
         super().close()
         self.refresh_thread.stop()
+        self.initialized_event.clear()
+
+    def get(self, namespace: str, key: str, context: Dict[str, Any]) -> ProtoAny:
+        if not self.initialized_event.wait(timeout=5):  # Give the background thread 5 seconds to populate
+            raise ClientNotInitialized("Repository contents not yet loaded from server")
+        return super().get(namespace, key, context)

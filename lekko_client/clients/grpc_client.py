@@ -16,6 +16,7 @@ from lekko_client.exceptions import (
     MismatchedType,
 )
 from lekko_client.gen.lekko.client.v1beta1.configuration_service_pb2 import (
+    DeregisterRequest,
     GetBoolValueRequest,
     GetFloatValueRequest,
     GetIntValueRequest,
@@ -74,6 +75,10 @@ class ConfigServiceClient(Client):
         except grpc.RpcError:
             # TODO:SAM - re-registering shouldn't cause errors in the future
             pass
+
+    def close(self):
+        super().close()
+        self._client.Deregister(DeregisterRequest())
 
     def get_bool(self, namespace: str, key: str, context: Dict[str, Any]) -> bool:
         return self._get(namespace, key, context, bool)

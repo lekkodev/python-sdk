@@ -59,3 +59,7 @@ class Client(ABC):
         proto_message_type: Type[ProtoType],
     ) -> ProtoType:
         ...
+
+    @abstractmethod
+    def close(self):
+        ...

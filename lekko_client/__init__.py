@@ -1,17 +1,18 @@
 """Lekko Python SDK Client"""
 
-from enum import Enum
+import functools
+from dataclasses import dataclass
+from threading import RLock
 from typing import Any, Dict, Optional, Type
 
 from google.protobuf.message import Message as ProtoMessage
 
 from lekko_client import exceptions
 from lekko_client.clients import (
-    APIClient,
     CachedBackendClient,
     CachedGitClient,
     Client,
-    SidecarClient,
+    ConfigServiceClient,
 )
 from lekko_client.constants import LEKKO_API_URL, LEKKO_SIDECAR_URL  # noqa
 from lekko_client.stores import MemoryStore
@@ -19,59 +20,112 @@ from lekko_client.stores import MemoryStore
 __version__ = "0.1.4"
 
 __client: Client
+__client_lock = RLock()
 
 
-class Mode(Enum):
-    API = 1
-    SIDECAR = 2
-    CACHED_SERVER = 3
-    CACHED_GIT = 4
+@dataclass(kw_only=True)
+class Config:
+    owner_name: str
+    repo_name: str
+    api_key: Optional[str] = None
+    context: Optional[Dict[str, Any]] = None
+    lekko_uri: str = LEKKO_API_URL
 
 
-def initialize(
-    mode: Mode,
-    owner_name: str,
-    repo_name: str,
-    api_key: Optional[str] = None,
-    context: Optional[Dict[str, Any]] = None,
-    git_repo_path: Optional[str] = None,
-) -> Client:
+@dataclass(kw_only=True)
+class SidecarConfig(Config):
+    lekko_uri = LEKKO_SIDECAR_URL
+
+
+@dataclass(kw_only=True)
+class APIConfig(Config):
+    pass
+
+
+@dataclass(kw_only=True)
+class CachedServerConfig(Config):
+    pass
+
+
+@dataclass(kw_only=True)
+class CachedGitConfig(Config):
+    git_repo_path: str
+
+
+def initialize(config: Config) -> Client:
     global __client
-    if mode == Mode.API:
-        __client = APIClient(owner_name, repo_name, api_key, context)
-    elif mode == Mode.SIDECAR:
-        __client = SidecarClient(owner_name, repo_name, api_key, context)
-    elif mode == Mode.CACHED_GIT:
-        if not git_repo_path:
-            raise exceptions.GitRepoNotFound("Must provide a path to git repo in Cached Git mode")
-        __client = CachedGitClient(LEKKO_API_URL, owner_name, repo_name, MemoryStore(), git_repo_path, api_key, context)
-    elif mode == Mode.CACHED_SERVER:
-        __client = CachedBackendClient(LEKKO_API_URL, owner_name, repo_name, MemoryStore(), api_key, context)
-    else:
-        raise exceptions.LekkoError("Unknown client mode")
-    return __client
+    with __client_lock:
+        if __client:
+            __client.close()
+        match config:
+            case APIConfig(_) | SidecarConfig(_):
+                __client = ConfigServiceClient(
+                    config.lekko_uri, config.owner_name, config.repo_name, config.api_key, config.context
+                )
+            case CachedGitConfig(_):
+                __client = CachedGitClient(
+                    config.lekko_uri,
+                    config.owner_name,
+                    config.repo_name,
+                    MemoryStore(),
+                    config.git_repo_path,
+                    config.api_key,
+                    config.context,
+                )
+            case CachedServerConfig(_):
+                __client = CachedBackendClient(
+                    config.lekko_uri, config.owner_name, config.repo_name, MemoryStore(), config.api_key, config.context
+                )
+            case _:
+                raise exceptions.LekkoError("Unknown client mode")
+        return __client
 
 
+def set_client(client: Client):
+    global __client
+    with __client_lock:
+        if __client:
+            __client.close()
+        __client = client
+
+
+def __get_safe(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        with __client_lock:
+            if not __client:
+                raise exceptions.ClientNotInitialized("lekko_client.initialize() must be called prior to using API")
+            return func(args, kwargs)
+
+    return wrapper
+
+
+@__get_safe
 def get_bool(namespace: str, key: str, context: Dict[str, Any]) -> bool:
     return __client.get_bool(namespace, key, context)
 
 
+@__get_safe
 def get_int(namespace: str, key: str, context: Dict[str, Any]) -> int:
     return __client.get_int(namespace, key, context)
 
 
+@__get_safe
 def get_float(namespace: str, key: str, context: Dict[str, Any]) -> float:
     return __client.get_float(namespace, key, context)
 
 
+@__get_safe
 def get_string(namespace: str, key: str, context: Dict[str, Any]) -> str:
     return __client.get_string(namespace, key, context)
 
 
+@__get_safe
 def get_json(namespace: str, key: str, context: Dict[str, Any]) -> dict:
     return __client.get_json(namespace, key, context)
 
 
+@__get_safe
 def get_proto(
     namespace: str,
     key: str,
@@ -80,6 +134,7 @@ def get_proto(
     return __client.get_proto(namespace, key, context)
 
 
+@__get_safe
 def get_proto_by_type(
     namespace: str,
     key: str,
