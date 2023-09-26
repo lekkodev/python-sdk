@@ -17,10 +17,8 @@ from google.protobuf.wrappers_pb2 import BoolValue, FloatValue, Int64Value, Stri
 
 from lekko_client.clients.client import Client
 from lekko_client.evaluation.evaluation import EvaluationResult, evaluate
-from lekko_client.evaluation.rules import ClientContext
-from lekko_client.exceptions import MismatchedProtoType, MismatchedType
+from lekko_client.exceptions import LekkoRpcError, MismatchedProtoType, MismatchedType
 from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
-    ContextKey,
     DeregisterClientRequest,
     FlagEvaluationEvent,
     GetRepositoryContentsResponse,
@@ -31,11 +29,8 @@ from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
 from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2_grpc import (
     DistributionServiceStub,
 )
-from lekko_client.gen.lekko.client.v1beta1.configuration_service_pb2 import (
-    Value as LekkoValue,
-)
-from lekko_client.helpers import convert_context, get_grpc_channel
-from lekko_client.models import FeatureData
+from lekko_client.helpers import convert_context, get_context_keys, get_grpc_channel
+from lekko_client.models import ClientContext, FeatureData
 from lekko_client.stores.store import Store
 
 
@@ -69,17 +64,6 @@ class CachedDistributionClient(Client):
                 self.upload_events()
                 time.sleep(self.upload_interval)
 
-        @classmethod
-        def get_value_type(cls, val: LekkoValue) -> str:
-            return (val.WhichOneof("kind") or "").removesuffix("_value")
-
-        @classmethod
-        def get_context_keys(cls, context: Optional[ClientContext] = None) -> List[ContextKey]:
-            if not context:
-                return []
-
-            return [ContextKey(key=k, type=cls.get_value_type(v)) for k, v in context.items()]
-
     def __init__(
         self,
         uri: str,
@@ -90,22 +74,17 @@ class CachedDistributionClient(Client):
         context: Optional[Dict[str, Any]] = None,
         credentials: grpc.ChannelCredentials = grpc.ssl_channel_credentials(),
     ):
-        from lekko_client import __version__
-
         super().__init__(owner_name, repo_name, api_key, context)
         self.uri = uri
         self.repository = RepositoryKey(owner_name=owner_name, repo_name=repo_name)
         self.store = store
-        self._client = None
+        self._client: Optional[DistributionServiceStub] = None
+        self.events_batcher = None
         if self.api_key:
-            channel = get_grpc_channel(self.uri, self.api_key, credentials)
-            self._client = DistributionServiceStub(channel)
-            register_response = self._client.RegisterClient(
-                RegisterClientRequest(repo_key=self.repository, sidecar_version=__version__)
-            )
-            self.session_key = register_response.session_key
-            self.events_batcher = self.EventsBatcher(self._client, self.session_key, 15 * 1000)
-            self.events_batcher.start()
+            self.initialize_client(credentials)
+            if self._client:
+                self.events_batcher = self.EventsBatcher(self._client, self.session_key, 15 * 1000)
+                self.events_batcher.start()
 
         self.initialize()
 
@@ -115,6 +94,19 @@ class CachedDistributionClient(Client):
         str: StringValue,
         float: FloatValue,
     }
+
+    def initialize_client(self, credentials: grpc.ChannelCredentials):
+        from lekko_client import __version__
+
+        channel = get_grpc_channel(self.uri, self.api_key, credentials)
+        self._client = DistributionServiceStub(channel)
+        try:
+            register_response = self._client.RegisterClient(
+                RegisterClientRequest(repo_key=self.repository, sidecar_version=__version__)
+            )
+        except grpc.RpcError as e:
+            raise LekkoRpcError(f"Unable to register distribution service: {e}")
+        self.session_key = register_response.session_key
 
     @abstractmethod
     def initialize(self):
@@ -134,6 +126,9 @@ class CachedDistributionClient(Client):
     def track(
         self, namespace: str, feature_data: FeatureData, result: EvaluationResult, context: Optional[ClientContext]
     ) -> None:
+        if not self.events_batcher:
+            return
+
         timestamp = Timestamp()
         timestamp.FromDatetime(datetime.utcnow())
         event = FlagEvaluationEvent(
@@ -142,7 +137,7 @@ class CachedDistributionClient(Client):
             feature_sha=feature_data.config_sha,
             namespace_name=namespace,
             feature_name=feature_data.feature.key,
-            context_keys=self.events_batcher.get_context_keys(context),
+            context_keys=get_context_keys(context),
             result_path=result.path,
             client_event_time=timestamp,
         )
@@ -150,8 +145,9 @@ class CachedDistributionClient(Client):
 
     def get(self, namespace: str, key: str, context: Dict[str, Any]) -> ProtoAny:
         feature_data = self.store.get(namespace, key)
-        result = evaluate(feature_data.feature, namespace, convert_context(context))
-        self.track(namespace, feature_data, result, context)
+        client_context = convert_context(context)
+        result = evaluate(feature_data.feature, namespace, client_context)
+        self.track(namespace, feature_data, result, client_context)
         return result.value
 
     ReturnType = TypeVar("ReturnType", str, float, int, bool)
@@ -209,6 +205,7 @@ class CachedDistributionClient(Client):
     def close(self):
         super().close()
         if self._client and self.session_key:
-            self.events_batcher.upload_events()
-            self.events_batcher.stop()
+            if self.events_batcher:
+                self.events_batcher.upload_events()
+                self.events_batcher.stop()
             self._client.DeregisterClient(DeregisterClientRequest(session_key=self.session_key))

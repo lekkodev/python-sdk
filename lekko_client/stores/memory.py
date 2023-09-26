@@ -1,6 +1,9 @@
 from typing import Dict
 
 from lekko_client.exceptions import FeatureNotFound, NamespaceNotFound
+from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
+    GetRepositoryContentsResponse,
+)
 from lekko_client.models import FeatureData
 from lekko_client.stores.store import Store
 
@@ -19,7 +22,7 @@ class MemoryStore(Store):
             raise FeatureNotFound(f"Feature {config_key} not found in namespace {namespace}")
         return result
 
-    def load_impl(self, contents) -> bool:
+    def load_impl(self, contents: GetRepositoryContentsResponse) -> bool:
         new_configs = {}
         for ns in contents.namespaces:
             namespace_map = {}

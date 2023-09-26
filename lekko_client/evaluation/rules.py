@@ -1,5 +1,4 @@
 import struct
-from typing import Dict, Optional
 
 from google.protobuf.struct_pb2 import Value
 from xxhash import xxh32
@@ -14,8 +13,7 @@ from lekko_client.gen.lekko.rules.v1beta3.rules_pb2 import (
     LogicalOperator,
     Rule,
 )
-
-ClientContext = Optional[Dict[str, LekkoValue]]
+from lekko_client.models import ClientContext
 
 
 def evaluate_rule(rule: Rule, namespace: str, config_name: str, context: ClientContext = None) -> bool:

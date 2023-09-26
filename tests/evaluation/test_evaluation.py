@@ -4,9 +4,9 @@ import pytest
 from google.protobuf.wrappers_pb2 import Int64Value
 
 from lekko_client.evaluation.evaluation import evaluate
-from lekko_client.evaluation.rules import ClientContext
 from lekko_client.gen.lekko.feature.v1beta1.feature_pb2 import Feature
 from lekko_client.helpers import convert_context
+from lekko_client.models import ClientContext
 
 
 @pytest.mark.parametrize(
@@ -35,7 +35,6 @@ def test_complex_evaluation(test_complex_rule_feature, context, expected):
     assert inner_result.value == expected
 
 
-@pytest.mark.only
 def test_empty_config_tree():
     with pytest.raises(Exception):
         evaluate(Feature(), "ns")

@@ -1,12 +1,14 @@
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import grpc
 from grpc_interceptor import ClientCallDetails, ClientInterceptor
 
+from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import ContextKey
 from lekko_client.gen.lekko.client.v1beta1.configuration_service_pb2 import Value
+from lekko_client.models import ClientContext
 
 
-def convert_context(context: dict) -> Dict[str, Value]:
+def convert_context(context: dict) -> ClientContext:
     def convert_value(val: Any) -> Value:
         if isinstance(val, bool):
             return Value(bool_value=val)
@@ -18,6 +20,17 @@ def convert_context(context: dict) -> Dict[str, Value]:
             return Value(string_value=str(val))
 
     return {k: convert_value(v) for k, v in context.items()}
+
+
+def get_value_type(val: Value) -> str:
+    return (val.WhichOneof("kind") or "").removesuffix("_value")
+
+
+def get_context_keys(context: Optional[ClientContext] = None) -> List[ContextKey]:
+    if not context:
+        return []
+
+    return [ContextKey(key=k, type=get_value_type(v)) for k, v in context.items()]
 
 
 class ApiKeyInterceptor(ClientInterceptor):

@@ -3,10 +3,11 @@ from typing import List, Optional
 
 from google.protobuf.any_pb2 import Any as ProtoAny
 
-from lekko_client.evaluation.rules import ClientContext, evaluate_rule
+from lekko_client.evaluation.rules import evaluate_rule
 from lekko_client.exceptions import EvaluationError
 from lekko_client.gen.lekko.feature.v1beta1.feature_pb2 import Any as LekkoAny
 from lekko_client.gen.lekko.feature.v1beta1.feature_pb2 import Constraint, Feature
+from lekko_client.models import ClientContext
 
 
 @dataclass
