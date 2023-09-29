@@ -19,7 +19,7 @@ from lekko_client.stores import MemoryStore
 
 __version__ = "0.1.4"
 
-__client: Client
+__client: Optional[Client] = None
 __client_lock = RLock()
 
 
@@ -89,6 +89,14 @@ def set_client(client: Client):
         __client = client
 
 
+def close():
+    global __client
+    with __client_lock:
+        if __client:
+            __client.close()
+            __client = None
+
+
 def __get_safe(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -102,26 +110,31 @@ def __get_safe(func):
 
 @__get_safe
 def get_bool(namespace: str, key: str, context: Dict[str, Any]) -> bool:
+    assert __client
     return __client.get_bool(namespace, key, context)
 
 
 @__get_safe
 def get_int(namespace: str, key: str, context: Dict[str, Any]) -> int:
+    assert __client
     return __client.get_int(namespace, key, context)
 
 
 @__get_safe
 def get_float(namespace: str, key: str, context: Dict[str, Any]) -> float:
+    assert __client
     return __client.get_float(namespace, key, context)
 
 
 @__get_safe
 def get_string(namespace: str, key: str, context: Dict[str, Any]) -> str:
+    assert __client
     return __client.get_string(namespace, key, context)
 
 
 @__get_safe
 def get_json(namespace: str, key: str, context: Dict[str, Any]) -> dict:
+    assert __client
     return __client.get_json(namespace, key, context)
 
 
@@ -131,6 +144,7 @@ def get_proto(
     key: str,
     context: Dict[str, Any],
 ) -> ProtoMessage:
+    assert __client
     return __client.get_proto(namespace, key, context)
 
 
@@ -141,4 +155,5 @@ def get_proto_by_type(
     context: Dict[str, Any],
     proto_message_type: Type[Client.ProtoType],
 ) -> Client.ProtoType:
+    assert __client
     return __client.get_proto_by_type(namespace, key, context, proto_message_type)

@@ -1,15 +1,16 @@
 import argparse
+import dataclasses
 
 import grpc
 from google.protobuf.json_format import MessageToDict
 
-from lekko_client import APIClient, SidecarClient
+import lekko_client
 from lekko_client.exceptions import LekkoError
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--apikey", type=str)
-    parser.add_argument("--sidecar", action="store_true")
+    parser.add_argument("--mode", type=str, choices=["sidecar", "api", "cachedapi", "cachedgit"])
     parser.add_argument("--owner", type=str)
     parser.add_argument("--repo", type=str)
     parser.add_argument("--namespace", type=str, default="default")
@@ -20,25 +21,38 @@ if __name__ == "__main__":
         choices=["bool", "int", "float", "str", "json", "proto"],
         default="bool",
     )
+    parser.add_argument("--git-path", type=str, default="")
     parser.add_argument("--proto-type", type=str, default="")
     parser.add_argument("--proto-file", type=str)
     args = parser.parse_args()
 
-    client_cls = SidecarClient if args.sidecar else APIClient
-    client = client_cls(args.owner, args.repo, args.namespace, api_key=args.apikey)
+    # client_cls = SidecarClient if args.sidecar else APIClient
+
+    base_config = lekko_client.Config(owner_name=args.owner, repo_name=args.repo, api_key=args.apikey)
+    if args.mode == "sidecar":
+        config = lekko_client.SidecarConfig(**dataclasses.asdict(base_config))
+    elif args.mode == "api":
+        config = lekko_client.APIConfig(**dataclasses.asdict(base_config))
+    elif args.mode == "cachedapi":
+        config = lekko_client.CachedServerConfig(**dataclasses.asdict(base_config))
+    elif args.mode == "cachedgit":
+        config = lekko_client.CachedGitConfig(**dataclasses.asdict(base_config), git_repo_path=args.git_path)
+    else:
+        raise ValueError("Invalid mode")
+    lekko_client.initialize(config)
 
     val = None
     try:
         if args.feature_type == "bool":
-            val = client.get_bool(args.feature, {})
+            val = lekko_client.get_bool(args.namespace, args.feature, {})
         elif args.feature_type == "int":
-            val = client.get_int(args.feature, {})
+            val = lekko_client.get_int(args.namespace, args.feature, {})
         elif args.feature_type == "str":
-            val = client.get_string(args.feature, {})
+            val = lekko_client.get_string(args.namespace, args.feature, {})
         elif args.feature_type == "json":
-            val = client.get_json(args.feature, {})
+            val = lekko_client.get_json(args.namespace, args.feature, {})
         elif args.feature_type == "float":
-            val = client.get_float(args.feature, {})
+            val = lekko_client.get_float(args.namespace, args.feature, {})
         elif args.feature_type == "proto":
             if not args.proto_file:
                 print(
@@ -49,9 +63,9 @@ if __name__ == "__main__":
 
                 if args.proto_type:
                     msg_type = getattr(imported_proto, args.proto_type)
-                    val = MessageToDict(client.get_proto_by_type(args.feature, {}, msg_type))
+                    val = MessageToDict(lekko_client.get_proto_by_type(args.namespace, args.feature, {}, msg_type))
                 else:
-                    val = MessageToDict(client.get_proto(args.feature, {}))
+                    val = MessageToDict(lekko_client.get_proto(args.namespace, args.feature, {}))
         print(f"Got {val} for feature {args.namespace}/{args.feature}")
     except LekkoError as e:
         print(f"Failed to get feature: {e}")
