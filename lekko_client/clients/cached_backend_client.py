@@ -1,3 +1,4 @@
+import logging
 import time
 from threading import Event, Thread
 from typing import Any, Dict, Optional
@@ -15,6 +16,8 @@ from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
 from lekko_client.stores.store import Store
 
 
+logger = logging.getLogger(__name__)
+
 class CachedBackendClient(CachedDistributionClient):
     class RefreshThread(Thread):
         def __init__(self, client: "CachedBackendClient", refresh_interval_ms: int):
@@ -29,9 +32,12 @@ class CachedBackendClient(CachedDistributionClient):
 
         def run(self):
             while self._enabled:
-                if self.client.should_update_store():
-                    self.client.update_store()
                 time.sleep(self.refresh_interval / 1000)
+                try:
+                    if self.client.should_update_store():
+                        self.client.update_store()
+                except:
+                    logger.warn("failed to refresh in-memory state")
 
     def __init__(
         self,
@@ -42,15 +48,27 @@ class CachedBackendClient(CachedDistributionClient):
         api_key: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
         credentials: grpc.ChannelCredentials = grpc.ssl_channel_credentials(),
+        bootstrap_client: Optional[CachedDistributionClient] = None,
     ):
         super().__init__(uri, owner_name, repo_name, store, api_key, context, credentials)
+        self.bootstrap_client = bootstrap_client
         self.timeout = None
         self.closed = False
         self.update_interval_ms = 1000
         self.initialized_event = Event()
 
-    def initialize(self):
+    def initialize(self) -> None:
         super().initialize()
+
+        try:
+            self.update_store()
+        except:
+            if self.bootstrap_client:
+                contents = self.bootstrap_client.load_contents()
+                if contents:
+                    self.store.load(contents)
+                    self.initialized_event.set()
+
         self.refresh_thread = CachedBackendClient.RefreshThread(self, self.update_interval_ms)
         self.refresh_thread.start()
 
@@ -58,7 +76,8 @@ class CachedBackendClient(CachedDistributionClient):
         if not self._client:
             return None
         return self._client.GetRepositoryContents(
-            GetRepositoryContentsRequest(repo_key=self.repository, session_key=self.session_key)
+            GetRepositoryContentsRequest(repo_key=self.repository, session_key=self.session_key),
+            timeout=3,
         )
 
     def update_store(self):
@@ -71,7 +90,8 @@ class CachedBackendClient(CachedDistributionClient):
         if not self.initialized_event.is_set():
             return True
         version_response = self._client.GetRepositoryVersion(
-            GetRepositoryVersionRequest(repo_key=self.repository, session_key=self.session_key)
+            GetRepositoryVersionRequest(repo_key=self.repository, session_key=self.session_key),
+            timeout=1,
         )
         current_sha = self.store.commit_sha
         return current_sha != version_response.commit_sha
