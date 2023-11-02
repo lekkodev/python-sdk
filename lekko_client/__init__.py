@@ -72,7 +72,7 @@ def initialize(config: Config) -> Client:
                     config.api_key,
                     config.context,
                 )
-            case CachedServerConfig(_):
+            case CachedServerConfig():
                 __client = CachedBackendClient(
                     config.lekko_uri, config.owner_name, config.repo_name, MemoryStore(), config.api_key, config.context
                 )
