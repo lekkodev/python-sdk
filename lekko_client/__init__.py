@@ -58,11 +58,11 @@ def initialize(config: Config) -> Client:
         if __client:
             __client.close()
         match config:
-            case APIConfig(_) | SidecarConfig(_):
+            case APIConfig() | SidecarConfig():
                 __client = ConfigServiceClient(
                     config.lekko_uri, config.owner_name, config.repo_name, config.api_key, config.context
                 )
-            case CachedGitConfig(_):
+            case CachedGitConfig():
                 __client = CachedGitClient(
                     config.lekko_uri,
                     config.owner_name,
@@ -103,7 +103,7 @@ def __get_safe(func):
         with __client_lock:
             if not __client:
                 raise exceptions.ClientNotInitialized("lekko_client.initialize() must be called prior to using API")
-            return func(args, kwargs)
+            return func(*args, **kwargs)
 
     return wrapper
 

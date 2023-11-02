@@ -61,7 +61,10 @@ class CachedDistributionClient(Client):
         def run(self):
             # TODO: Lock
             while self._enabled:
-                self.upload_events()
+                try:
+                    self.upload_events()
+                except:
+                    log.warning("failed to send config evaluation events to lekko")
                 time.sleep(self.upload_interval)
 
     def __init__(
@@ -79,6 +82,7 @@ class CachedDistributionClient(Client):
         self.repository = RepositoryKey(owner_name=owner_name, repo_name=repo_name)
         self.store = store
         self._client: Optional[DistributionServiceStub] = None
+        self.session_key = ''
         self.events_batcher = None
         if self.api_key:
             self.initialize_client(credentials)
@@ -109,7 +113,7 @@ class CachedDistributionClient(Client):
         self.session_key = register_response.session_key
 
     @abstractmethod
-    def initialize(self):
+    def initialize(self) -> None:
         ...
 
     def load(self) -> bool:

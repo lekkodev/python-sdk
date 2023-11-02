@@ -9,7 +9,7 @@ from lekko_client.stores.store import Store
 
 
 class MemoryStore(Store):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.configs: Dict[str, Dict[str, FeatureData]] = {}
 

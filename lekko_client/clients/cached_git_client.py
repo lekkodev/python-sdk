@@ -53,7 +53,7 @@ class CachedGitClient(CachedDistributionClient):
         self.path = path
         self.should_watch = should_watch
 
-    def initialize(self):
+    def initialize(self) -> None:
         super().initialize()
         self.load()
         if self.should_watch:
