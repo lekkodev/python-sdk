@@ -1,20 +1,19 @@
 """Lekko Python SDK Client"""
 
 import functools
+import logging
 from dataclasses import dataclass
 from threading import RLock
 from typing import Any, Dict, Optional, Type
-import logging
 
 from google.protobuf.message import Message as ProtoMessage
 
 from lekko_client import exceptions
 from lekko_client.clients import (
+    APIClient,
     CachedBackendClient,
     CachedGitClient,
     Client,
-    ConfigServiceClient,
-    APIClient,
     SidecarClient,
 )
 from lekko_client.constants import LEKKO_API_URL, LEKKO_SIDECAR_URL  # noqa
@@ -65,16 +64,16 @@ def initialize(config: Config) -> Client:
         match config:
             case APIConfig():
                 __client = APIClient(
-                    owner_name=config.owner_name, 
-                    repo_name=config.repo_name, 
-                    api_key=config.api_key, 
+                    owner_name=config.owner_name,
+                    repo_name=config.repo_name,
+                    api_key=config.api_key,
                     context=config.context,
                 )
             case SidecarConfig():
                 __client = SidecarClient(
-                    owner_name=config.owner_name, 
-                    repo_name=config.repo_name, 
-                    api_key=config.api_key, 
+                    owner_name=config.owner_name,
+                    repo_name=config.repo_name,
+                    api_key=config.api_key,
                     context=config.context,
                 )
             case CachedGitConfig():

@@ -1,11 +1,11 @@
 import json
+import logging
+import queue
 import time
 from abc import abstractmethod
 from datetime import datetime
 from threading import Thread
 from typing import Any, Dict, List, Optional, Type, TypeVar
-import logging
-import queue
 
 import grpc
 from google.protobuf import descriptor_pool as proto_descriptor_pool
@@ -40,7 +40,9 @@ log = logging.getLogger(__name__)
 
 class CachedDistributionClient(Client):
     class EventsBatcher(Thread):
-        def __init__(self, dist_client: DistributionServiceStub, session_key: str, upload_interval_ms: int, batch_size: int):
+        def __init__(
+            self, dist_client: DistributionServiceStub, session_key: str, upload_interval_ms: int, batch_size: int
+        ):
             super().__init__()
             self.daemon = True
             self.dist_client = dist_client
@@ -73,7 +75,7 @@ class CachedDistributionClient(Client):
                     try:
                         self.upload_events()
                         last_upload_time = now
-                    except:
+                    except Exception:
                         log.warning("Failed to upload config evaluation events.")
 
     def __init__(
@@ -91,12 +93,14 @@ class CachedDistributionClient(Client):
         self.repository = RepositoryKey(owner_name=owner_name, repo_name=repo_name)
         self.store = store
         self._client: Optional[DistributionServiceStub] = None
-        self.session_key = ''
+        self.session_key = ""
         self.events_batcher = None
         if self.api_key:
             self.initialize_client(credentials)
             if self._client:
-                self.events_batcher = self.EventsBatcher(self._client, self.session_key, upload_interval_ms=5 * 1_000, batch_size=100)
+                self.events_batcher = self.EventsBatcher(
+                    self._client, self.session_key, upload_interval_ms=5 * 1_000, batch_size=100
+                )
                 self.events_batcher.start()
 
         self.initialize()
