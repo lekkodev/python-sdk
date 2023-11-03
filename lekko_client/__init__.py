@@ -121,9 +121,7 @@ def __get_safe(func):
     def wrapper(*args, **kwargs):
         with __client_lock:
             if not __client:
-                raise exceptions.ClientNotInitialized(
-                    "lekko_client.initialize() must be called prior to using API"
-                )
+                raise exceptions.ClientNotInitialized("lekko_client.initialize() must be called prior to using API")
             return func(*args, **kwargs)
 
     return wrapper
