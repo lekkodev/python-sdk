@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from abc import abstractmethod
 from datetime import datetime
@@ -34,6 +35,9 @@ from lekko_client.models import ClientContext, FeatureData
 from lekko_client.stores.store import Store
 
 
+log = logging.getLogger(__name__)
+
+
 class CachedDistributionClient(Client):
     class EventsBatcher(Thread):
         def __init__(self, dist_client: DistributionServiceStub, session_key: str, upload_interval_ms: int):
@@ -54,7 +58,8 @@ class CachedDistributionClient(Client):
         def upload_events(self):
             if self.events:
                 self.dist_client.SendFlagEvaluationMetrics(
-                    SendFlagEvaluationMetricsRequest(events=self.events, session_key=self.session_key)
+                    SendFlagEvaluationMetricsRequest(events=self.events, session_key=self.session_key),
+                    timeout=10,
                 )
             self.events = []
 
@@ -76,8 +81,9 @@ class CachedDistributionClient(Client):
         api_key: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
         credentials: grpc.ChannelCredentials = grpc.ssl_channel_credentials(),
+        local: bool = False,
     ):
-        super().__init__(owner_name, repo_name, api_key, context)
+        super().__init__(owner_name, repo_name, api_key, context, local=local)
         self.uri = uri
         self.repository = RepositoryKey(owner_name=owner_name, repo_name=repo_name)
         self.store = store
@@ -90,7 +96,6 @@ class CachedDistributionClient(Client):
                 self.events_batcher = self.EventsBatcher(self._client, self.session_key, 15 * 1000)
                 self.events_batcher.start()
 
-        self.initialize()
 
     _TYPE_MAPPING: Dict[Type, Type[BoolValue | Int64Value | StringValue | FloatValue]] = {
         bool: BoolValue,
@@ -106,11 +111,13 @@ class CachedDistributionClient(Client):
         self._client = DistributionServiceStub(channel)
         try:
             register_response = self._client.RegisterClient(
-                RegisterClientRequest(repo_key=self.repository, sidecar_version=__version__)
+                RegisterClientRequest(repo_key=self.repository, sidecar_version=__version__),
+                timeout=1,
             )
+            self.session_key = register_response.session_key
         except grpc.RpcError as e:
-            raise LekkoRpcError(f"Unable to register distribution service: {e}")
-        self.session_key = register_response.session_key
+            log.warning("failed to register lekko client")
+            # raise LekkoRpcError(f"Unable to register distribution service: {e}")
 
     @abstractmethod
     def initialize(self) -> None:

@@ -47,8 +47,9 @@ class CachedGitClient(CachedDistributionClient):
         context: Optional[Dict[str, Any]] = None,
         credentials: grpc.ChannelCredentials = grpc.ssl_channel_credentials(),
         should_watch: Optional[bool] = True,
+        local: bool = False,
     ):
-        super().__init__(lekko_uri, repository_owner, repository_name, store, api_key, context, credentials)
+        super().__init__(lekko_uri, repository_owner, repository_name, store, api_key, context, credentials, local=local)
         self.watcher: Optional[BaseObserver] = None
         self.path = path
         self.should_watch = should_watch

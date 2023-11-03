@@ -14,12 +14,16 @@ class Client(ABC):
         repo_name: str,
         api_key: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
+        local: bool = False,
     ):
         self.owner_name = owner_name
         self.repo_name = repo_name
         self.context = context or {}
 
-        self.api_key = api_key or os.environ.get("LEKKO_API_KEY")
+        if local:
+            self.api_key = None
+        else:
+            self.api_key = api_key or os.environ.get("LEKKO_API_KEY")
 
     @abstractmethod
     def get_bool(self, namespace: str, key: str, context: Dict[str, Any]) -> bool:

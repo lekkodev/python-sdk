@@ -75,6 +75,9 @@ class ConfigServiceClient(Client):
         except grpc.RpcError:
             # TODO:SAM - re-registering shouldn't cause errors in the future
             pass
+    
+    def initialize(self) -> None:
+        pass
 
     def close(self):
         super().close()

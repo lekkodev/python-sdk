@@ -44,12 +44,13 @@ class APIConfig(Config):
 
 @dataclass(kw_only=True)
 class CachedServerConfig(Config):
-    pass
+    bootstrap_git_repo_path: Optional[str] = None
 
 
 @dataclass(kw_only=True)
 class CachedGitConfig(Config):
     git_repo_path: str
+    local: bool = False
 
 
 def initialize(config: Config) -> Client:
@@ -60,7 +61,11 @@ def initialize(config: Config) -> Client:
         match config:
             case APIConfig() | SidecarConfig():
                 __client = ConfigServiceClient(
-                    config.lekko_uri, config.owner_name, config.repo_name, config.api_key, config.context
+                    config.lekko_uri,
+                    config.owner_name,
+                    config.repo_name,
+                    config.api_key,
+                    config.context,
                 )
             case CachedGitConfig():
                 __client = CachedGitClient(
@@ -71,13 +76,34 @@ def initialize(config: Config) -> Client:
                     config.git_repo_path,
                     config.api_key,
                     config.context,
+                    local=config.local,
                 )
             case CachedServerConfig():
+                bootstrap_client = (
+                    CachedGitClient(
+                        config.lekko_uri,
+                        config.owner_name,
+                        config.repo_name,
+                        MemoryStore(),
+                        config.bootstrap_git_repo_path,
+                        config.api_key,
+                        local=True,
+                    )
+                    if config.bootstrap_git_repo_path
+                    else None
+                )
                 __client = CachedBackendClient(
-                    config.lekko_uri, config.owner_name, config.repo_name, MemoryStore(), config.api_key, config.context
+                    config.lekko_uri,
+                    config.owner_name,
+                    config.repo_name,
+                    MemoryStore(),
+                    config.api_key,
+                    config.context,
+                    bootstrap_client=bootstrap_client,
                 )
             case _:
                 raise exceptions.LekkoError("Unknown client mode")
+        __client.initialize()
         return __client
 
 
@@ -102,7 +128,9 @@ def __get_safe(func):
     def wrapper(*args, **kwargs):
         with __client_lock:
             if not __client:
-                raise exceptions.ClientNotInitialized("lekko_client.initialize() must be called prior to using API")
+                raise exceptions.ClientNotInitialized(
+                    "lekko_client.initialize() must be called prior to using API"
+                )
             return func(*args, **kwargs)
 
     return wrapper
