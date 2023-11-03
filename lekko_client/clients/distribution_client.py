@@ -5,6 +5,7 @@ from datetime import datetime
 from threading import Thread
 from typing import Any, Dict, List, Optional, Type, TypeVar
 import logging
+import queue
 
 import grpc
 from google.protobuf import descriptor_pool as proto_descriptor_pool
@@ -39,36 +40,41 @@ log = logging.getLogger(__name__)
 
 class CachedDistributionClient(Client):
     class EventsBatcher(Thread):
-        def __init__(self, dist_client: DistributionServiceStub, session_key: str, upload_interval_ms: int):
+        def __init__(self, dist_client: DistributionServiceStub, session_key: str, upload_interval_ms: int, batch_size: int):
             super().__init__()
             self.daemon = True
             self.dist_client = dist_client
-            self.upload_interval = upload_interval_ms
+            self.upload_interval = upload_interval_ms / 1000
+            self.batch_size = batch_size
             self.session_key = session_key
             self.events: List[FlagEvaluationEvent] = []
             self._enabled = True
+            self.queue: queue.Queue[FlagEvaluationEvent] = queue.Queue()
 
         def stop(self):
             self._enabled = False
 
         def add_event(self, event: FlagEvaluationEvent):
-            self.events.append(event)
+            self.queue.put(event)
 
         def upload_events(self):
             if self.events:
                 self.dist_client.SendFlagEvaluationMetrics(
                     SendFlagEvaluationMetricsRequest(events=self.events, session_key=self.session_key)
                 )
-            self.events = []
 
         def run(self):
-            # TODO: Lock
+            last_upload_time = time.time()
             while self._enabled:
-                try:
-                    self.upload_events()
-                except:
-                    log.warning("Failed to upload config evaluation events.")
-                time.sleep(self.upload_interval)
+                event = self.queue.get()
+                self.events.append(event)
+                now = time.time()
+                if (len(self.events) > self.batch_size) or (now - last_upload_time > self.upload_interval):
+                    try:
+                        self.upload_events()
+                        last_upload_time = now
+                    except:
+                        log.warning("Failed to upload config evaluation events.")
 
     def __init__(
         self,
@@ -90,7 +96,7 @@ class CachedDistributionClient(Client):
         if self.api_key:
             self.initialize_client(credentials)
             if self._client:
-                self.events_batcher = self.EventsBatcher(self._client, self.session_key, 15 * 1000)
+                self.events_batcher = self.EventsBatcher(self._client, self.session_key, upload_interval_ms=5 * 1_000, batch_size=100)
                 self.events_batcher.start()
 
         self.initialize()
@@ -215,4 +221,5 @@ class CachedDistributionClient(Client):
             if self.events_batcher:
                 self.events_batcher.upload_events()
                 self.events_batcher.stop()
+                self.events_batcher.join(timeout=5)
             self._client.DeregisterClient(DeregisterClientRequest(session_key=self.session_key))
