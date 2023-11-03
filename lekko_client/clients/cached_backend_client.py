@@ -42,12 +42,13 @@ class CachedBackendClient(CachedDistributionClient):
         api_key: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
         credentials: grpc.ChannelCredentials = grpc.ssl_channel_credentials(),
+        update_interval_ms: int = 1000,
     ):
-        super().__init__(uri, owner_name, repo_name, store, api_key, context, credentials)
+        self.update_interval_ms = update_interval_ms
         self.timeout = None
         self.closed = False
-        self.update_interval_ms = 1000
         self.initialized_event = Event()
+        super().__init__(uri, owner_name, repo_name, store, api_key, context, credentials)
 
     def initialize(self):
         super().initialize()

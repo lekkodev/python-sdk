@@ -13,6 +13,8 @@ from lekko_client.clients import (
     CachedGitClient,
     Client,
     ConfigServiceClient,
+    APIClient,
+    SidecarClient,
 )
 from lekko_client.constants import LEKKO_API_URL, LEKKO_SIDECAR_URL  # noqa
 from lekko_client.stores import MemoryStore
@@ -58,9 +60,19 @@ def initialize(config: Config) -> Client:
         if __client:
             __client.close()
         match config:
-            case APIConfig() | SidecarConfig():
-                __client = ConfigServiceClient(
-                    config.lekko_uri, config.owner_name, config.repo_name, config.api_key, config.context
+            case APIConfig():
+                __client = APIClient(
+                    owner_name=config.owner_name, 
+                    repo_name=config.repo_name, 
+                    api_key=config.api_key, 
+                    context=config.context,
+                )
+            case SidecarConfig():
+                __client = SidecarClient(
+                    owner_name=config.owner_name, 
+                    repo_name=config.repo_name, 
+                    api_key=config.api_key, 
+                    context=config.context,
                 )
             case CachedGitConfig():
                 __client = CachedGitClient(

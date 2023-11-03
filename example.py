@@ -14,9 +14,9 @@ if __name__ == "__main__":
     parser.add_argument("--owner", type=str)
     parser.add_argument("--repo", type=str)
     parser.add_argument("--namespace", type=str, default="default")
-    parser.add_argument("--feature", type=str, default="example")
+    parser.add_argument("--config", type=str, default="example")
     parser.add_argument(
-        "--feature-type",
+        "--config-type",
         type=str,
         choices=["bool", "int", "float", "str", "json", "proto"],
         default="bool",
@@ -43,17 +43,17 @@ if __name__ == "__main__":
 
     val = None
     try:
-        if args.feature_type == "bool":
-            val = lekko_client.get_bool(args.namespace, args.feature, {})
-        elif args.feature_type == "int":
-            val = lekko_client.get_int(args.namespace, args.feature, {})
-        elif args.feature_type == "str":
-            val = lekko_client.get_string(args.namespace, args.feature, {})
-        elif args.feature_type == "json":
-            val = lekko_client.get_json(args.namespace, args.feature, {})
-        elif args.feature_type == "float":
-            val = lekko_client.get_float(args.namespace, args.feature, {})
-        elif args.feature_type == "proto":
+        if args.config_type == "bool":
+            val = lekko_client.get_bool(args.namespace, args.config, {})
+        elif args.config_type == "int":
+            val = lekko_client.get_int(args.namespace, args.config, {})
+        elif args.config_type == "str":
+            val = lekko_client.get_string(args.namespace, args.config, {})
+        elif args.config_type == "json":
+            val = lekko_client.get_json(args.namespace, args.config, {})
+        elif args.config_type == "float":
+            val = lekko_client.get_float(args.namespace, args.config, {})
+        elif args.config_type == "proto":
             if not args.proto_file:
                 print(
                     "Must provide a --proto-file. Could be a path or a well-known proto like 'google/protobuf/wrappers.proto'"
@@ -63,11 +63,11 @@ if __name__ == "__main__":
 
                 if args.proto_type:
                     msg_type = getattr(imported_proto, args.proto_type)
-                    val = MessageToDict(lekko_client.get_proto_by_type(args.namespace, args.feature, {}, msg_type))
+                    val = MessageToDict(lekko_client.get_proto_by_type(args.namespace, args.config, {}, msg_type))
                 else:
-                    val = MessageToDict(lekko_client.get_proto(args.namespace, args.feature, {}))
-        print(f"Got {val} for feature {args.namespace}/{args.feature}")
+                    val = MessageToDict(lekko_client.get_proto(args.namespace, args.config, {}))
+        print(f"Got {val} for config {args.namespace}/{args.config}")
     except LekkoError as e:
-        print(f"Failed to get feature: {e}")
+        print(f"Failed to get config: {e}")
         if e.__cause__:
             print(f"Caused by: {e.__cause__}")
