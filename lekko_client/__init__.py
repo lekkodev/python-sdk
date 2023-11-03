@@ -4,6 +4,7 @@ import functools
 from dataclasses import dataclass
 from threading import RLock
 from typing import Any, Dict, Optional, Type
+import logging
 
 from google.protobuf.message import Message as ProtoMessage
 
@@ -20,6 +21,8 @@ from lekko_client.constants import LEKKO_API_URL, LEKKO_SIDECAR_URL  # noqa
 from lekko_client.stores import MemoryStore
 
 __version__ = "0.1.4"
+
+logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __client: Optional[Client] = None
 __client_lock = RLock()

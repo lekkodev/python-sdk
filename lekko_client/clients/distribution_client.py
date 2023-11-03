@@ -4,6 +4,7 @@ from abc import abstractmethod
 from datetime import datetime
 from threading import Thread
 from typing import Any, Dict, List, Optional, Type, TypeVar
+import logging
 
 import grpc
 from google.protobuf import descriptor_pool as proto_descriptor_pool
@@ -32,6 +33,8 @@ from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2_grpc import
 from lekko_client.helpers import convert_context, get_context_keys, get_grpc_channel
 from lekko_client.models import ClientContext, FeatureData
 from lekko_client.stores.store import Store
+
+log = logging.getLogger(__name__)
 
 
 class CachedDistributionClient(Client):
@@ -64,7 +67,7 @@ class CachedDistributionClient(Client):
                 try:
                     self.upload_events()
                 except:
-                    log.warning("failed to send config evaluation events to lekko")
+                    log.warning("Failed to upload config evaluation events.")
                 time.sleep(self.upload_interval)
 
     def __init__(
