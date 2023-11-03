@@ -1,3 +1,4 @@
+import logging
 import time
 from threading import Event, Thread
 from typing import Any, Dict, Optional
@@ -13,6 +14,8 @@ from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
     GetRepositoryVersionRequest,
 )
 from lekko_client.stores.store import Store
+
+log = logging.getLogger(__name__)
 
 
 class CachedBackendClient(CachedDistributionClient):
@@ -71,9 +74,12 @@ class CachedBackendClient(CachedDistributionClient):
             return False
         if not self.initialized_event.is_set():
             return True
-        version_response = self._client.GetRepositoryVersion(
-            GetRepositoryVersionRequest(repo_key=self.repository, session_key=self.session_key)
-        )
+        try:
+            version_response = self._client.GetRepositoryVersion(
+                GetRepositoryVersionRequest(repo_key=self.repository, session_key=self.session_key)
+            )
+        except Exception:
+            log.warning("Failed to fetch latest repository version", exc_info=True)
         current_sha = self.store.commit_sha
         return current_sha != version_response.commit_sha
 

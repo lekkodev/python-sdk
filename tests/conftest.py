@@ -317,7 +317,7 @@ def mock_store() -> Store:
 
 @pytest.fixture
 def mock_event_batcher():
-    def mock_event_batcher_factory(self, client, session_key, interval):
+    def mock_event_batcher_factory(self, client, session_key, upload_interval_ms, batch_size):
         return mock.Mock(spec_set=CachedDistributionClient.EventsBatcher)
 
     return mock_event_batcher_factory

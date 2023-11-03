@@ -41,7 +41,7 @@ profile = "black"
 skip_glob = ["*_pb2*.py*"]
 
 [tool.bumpversion]
-current_version = "0.1.4"
+current_version = "0.2.0"
 tag = true
 allow_dirty = true
 commit = false

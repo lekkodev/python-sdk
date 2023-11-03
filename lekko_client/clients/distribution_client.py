@@ -68,7 +68,10 @@ class CachedDistributionClient(Client):
         def run(self):
             last_upload_time = time.time()
             while self._enabled:
-                event = self.queue.get()
+                try:
+                    event = self.queue.get(block=False)
+                except queue.Empty:
+                    continue
                 self.events.append(event)
                 now = time.time()
                 if (len(self.events) > self.batch_size) or (now - last_upload_time > self.upload_interval):
