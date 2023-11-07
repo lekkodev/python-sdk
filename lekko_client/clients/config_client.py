@@ -1,6 +1,4 @@
 import json
-import os
-from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Tuple, Type, TypeVar
 
 import grpc
@@ -9,7 +7,8 @@ from google.protobuf import symbol_database as proto_symbol_database
 from google.protobuf.any_pb2 import Any as AnyProto
 from google.protobuf.message import Message as ProtoMessage
 
-from lekko_client import LEKKO_API_URL, LEKKO_SIDECAR_URL
+from lekko_client.clients.client import Client
+from lekko_client.constants import LEKKO_API_URL, LEKKO_SIDECAR_URL
 from lekko_client.exceptions import (
     AuthenticationError,
     FeatureNotFound,
@@ -17,6 +16,7 @@ from lekko_client.exceptions import (
     MismatchedType,
 )
 from lekko_client.gen.lekko.client.v1beta1.configuration_service_pb2 import (
+    DeregisterRequest,
     GetBoolValueRequest,
     GetFloatValueRequest,
     GetIntValueRequest,
@@ -32,63 +32,7 @@ from lekko_client.gen.lekko.client.v1beta1.configuration_service_pb2_grpc import
 from lekko_client.helpers import convert_context, get_grpc_channel
 
 
-class Client(ABC):
-    ProtoType = TypeVar("ProtoType", bound=ProtoMessage)
-
-    def __init__(
-        self,
-        owner_name: str,
-        repo_name: str,
-        namespace: str,
-        api_key: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None,
-    ):
-        self.owner_name = owner_name
-        self.repo_name = repo_name
-        self.namespace = namespace
-        self.context = context or {}
-
-        self.api_key = api_key or os.environ.get("LEKKO_API_KEY")
-
-    @abstractmethod
-    def get_bool(self, key: str, context: Dict[str, Any]) -> bool:
-        ...
-
-    @abstractmethod
-    def get_int(self, key: str, context: Dict[str, Any]) -> int:
-        ...
-
-    @abstractmethod
-    def get_float(self, key: str, context: Dict[str, Any]) -> float:
-        ...
-
-    @abstractmethod
-    def get_string(self, key: str, context: Dict[str, Any]) -> str:
-        ...
-
-    @abstractmethod
-    def get_json(self, key: str, context: Dict[str, Any]) -> dict:
-        ...
-
-    @abstractmethod
-    def get_proto(
-        self,
-        key: str,
-        context: Dict[str, Any],
-    ) -> ProtoMessage:
-        ...
-
-    @abstractmethod
-    def get_proto_by_type(
-        self,
-        key: str,
-        context: Dict[str, Any],
-        proto_message_type: Type[ProtoType],
-    ) -> ProtoType:
-        ...
-
-
-class GRPCClient(Client):
+class ConfigServiceClient(Client):
     _channels: Dict[Tuple[str, str], grpc.Channel] = {}
 
     class JsonBytes(bytes):
@@ -110,16 +54,13 @@ class GRPCClient(Client):
         uri: str,
         owner_name: str,
         repo_name: str,
-        namespace: str,
         api_key: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
         credentials: Optional[grpc.ChannelCredentials] = None,
     ):
-        super().__init__(owner_name, repo_name, namespace, api_key)
+        super().__init__(owner_name, repo_name, api_key)
         self.repository = RepositoryKey(owner_name=owner_name, repo_name=repo_name)
-        self.api_key = api_key or os.environ.get("LEKKO_API_KEY")
 
-        self.namespace = namespace
         self.context = context or {}
         self.uri = uri
 
@@ -130,29 +71,33 @@ class GRPCClient(Client):
 
         self._client = ConfigurationServiceStub(channel)
         try:
-            self._client.Register(RegisterRequest(repo_key=self.repository, namespace_list=[namespace]))
+            self._client.Register(RegisterRequest(repo_key=self.repository, namespace_list=[]))
         except grpc.RpcError:
             # TODO:SAM - re-registering shouldn't cause errors in the future
             pass
 
-    def get_bool(self, key: str, context: Dict[str, Any]) -> bool:
-        return self._get(key, context, bool)
+    def close(self):
+        super().close()
+        self._client.Deregister(DeregisterRequest())
 
-    def get_int(self, key: str, context: Dict[str, Any]) -> int:
-        return self._get(key, context, int)
+    def get_bool(self, namespace: str, key: str, context: Dict[str, Any]) -> bool:
+        return self._get(namespace, key, context, bool)
 
-    def get_float(self, key: str, context: Dict[str, Any]) -> float:
-        return self._get(key, context, float)
+    def get_int(self, namespace: str, key: str, context: Dict[str, Any]) -> int:
+        return self._get(namespace, key, context, int)
 
-    def get_string(self, key: str, context: Dict[str, Any]) -> str:
-        return self._get(key, context, str)
+    def get_float(self, namespace: str, key: str, context: Dict[str, Any]) -> float:
+        return self._get(namespace, key, context, float)
 
-    def get_json(self, key: str, context: Dict[str, Any]) -> dict:
-        json_bytes = self._get(key, context, GRPCClient.JsonBytes)
+    def get_string(self, namespace: str, key: str, context: Dict[str, Any]) -> str:
+        return self._get(namespace, key, context, str)
+
+    def get_json(self, namespace: str, key: str, context: Dict[str, Any]) -> dict:
+        json_bytes = self._get(namespace, key, context, ConfigServiceClient.JsonBytes)
         return json.loads(json_bytes.decode("utf-8"))
 
-    def get_proto(self, key: str, context: Dict[str, Any]) -> ProtoMessage:
-        val = self._get_proto(key, context)
+    def get_proto(self, namespace: str, key: str, context: Dict[str, Any]) -> ProtoMessage:
+        val = self._get_proto(namespace, key, context)
         db = proto_symbol_database.SymbolDatabase(pool=proto_descriptor_pool.Default())
         try:
             ret_val = db.GetSymbol(val.type_url.split("/")[1])()
@@ -164,25 +109,26 @@ class GRPCClient(Client):
 
     def get_proto_by_type(
         self,
+        namespace: str,
         key: str,
         context: Dict[str, Any],
         proto_message_type: Type[Client.ProtoType],
     ) -> Client.ProtoType:
-        val = self._get_proto(key, context)
+        val = self._get_proto(namespace, key, context)
         ret_val = proto_message_type()
         if val.Unpack(ret_val):
             return ret_val
 
         raise MismatchedProtoType(f"Error unpacking from {val.type_url} to {proto_message_type.DESCRIPTOR.name}")
 
-    def _get(self, key: str, context: Dict[str, Any], typ: Type[ReturnType]) -> ReturnType:
+    def _get(self, namespace: str, key: str, context: Dict[str, Any], typ: Type[ReturnType]) -> ReturnType:
         ctx = self.context | context
         fn_name, req_type = self._TYPE_MAPPING[typ]
         try:
             req = req_type(
                 key=key,
                 context=convert_context(ctx),
-                namespace=self.namespace,
+                namespace=namespace,
                 repo_key=self.repository,
             )
             response = getattr(self._client, fn_name)(req)
@@ -194,13 +140,13 @@ class GRPCClient(Client):
                 raise MismatchedType(e.details()) from e
             raise
 
-    def _get_proto(self, key: str, context: Dict[str, Any]) -> AnyProto:
+    def _get_proto(self, namespace: str, key: str, context: Dict[str, Any]) -> AnyProto:
         ctx = self.context | context
         try:
             req = GetProtoValueRequest(
                 key=key,
                 context=convert_context(ctx),
-                namespace=self.namespace,
+                namespace=namespace,
                 repo_key=self.repository,
             )
             response = self._client.GetProtoValue(req)
@@ -218,25 +164,23 @@ class GRPCClient(Client):
             raise
 
 
-class SidecarClient(GRPCClient):
+class SidecarClient(ConfigServiceClient):
     def __init__(
         self,
         owner_name: str,
         repo_name: str,
-        namespace: str,
         api_key: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
         uri: str = LEKKO_SIDECAR_URL,
     ):
-        super().__init__(uri, owner_name, repo_name, namespace, api_key, context)
+        super().__init__(uri, owner_name, repo_name, api_key, context)
 
 
-class APIClient(GRPCClient):
+class APIClient(ConfigServiceClient):
     def __init__(
         self,
         owner_name: str,
         repo_name: str,
-        namespace: str,
         api_key: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
         uri: str = LEKKO_API_URL,
@@ -246,7 +190,6 @@ class APIClient(GRPCClient):
             uri,
             owner_name,
             repo_name,
-            namespace,
             api_key,
             context,
             credentials,

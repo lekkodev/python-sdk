@@ -20,7 +20,6 @@ _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'lekko.client.v1beta1.configuration_service_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
-
   DESCRIPTOR._options = None
   _GETBOOLVALUEREQUEST_CONTEXTENTRY._options = None
   _GETBOOLVALUEREQUEST_CONTEXTENTRY._serialized_options = b'8\001'

@@ -10,6 +10,10 @@ class LekkoRpcError(LekkoError):
     pass
 
 
+class NamespaceNotFound(LekkoRpcError):
+    pass
+
+
 class FeatureNotFound(LekkoRpcError):
     pass
 
@@ -19,4 +23,16 @@ class MismatchedType(LekkoRpcError):
 
 
 class MismatchedProtoType(LekkoError):
+    pass
+
+
+class EvaluationError(LekkoError):
+    pass
+
+
+class GitRepoNotFound(LekkoError):
+    pass
+
+
+class ClientNotInitialized(LekkoError):
     pass
