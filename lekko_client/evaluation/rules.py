@@ -24,60 +24,63 @@ def evaluate_rule(rule: Rule, namespace: str, config_name: str, context: ClientC
     if not rule_type:
         raise EvaluationError("Empty rule")
 
-    rule_value = getattr(rule, rule_type)
+    #rule_value = getattr(rule, rule_type)
 
     if rule_type == "bool_const":
-        return rule_value
+        return rule.bool_const
     elif rule_type == "not":
         return not evaluate_rule(rule_value, namespace, config_name, context)
     elif rule_type == "logical_expression":
-        if not rule_value.rules:
+        expr = rule.logical_expression
+        if not expr.rules:
             raise EvaluationError("No rules found in logical expression")
 
-        logical_operator = rule_value.logical_operator
+        logical_operator = expr.logical_operator
         return (
-            all(evaluate_rule(r, namespace, config_name, context) for r in rule_value.rules)
+            all(evaluate_rule(r, namespace, config_name, context) for r in expr.rules)
             if logical_operator == LogicalOperator.LOGICAL_OPERATOR_AND
-            else any(evaluate_rule(r, namespace, config_name, context) for r in rule_value.rules)
+            else any(evaluate_rule(r, namespace, config_name, context) for r in expr.rules)
         )
     elif rule_type == "atom":
-        context_key = rule_value.context_key
+        atom = rule.atom
+        context_key = atom.context_key
         context_value = context.get(context_key) if context else None
 
-        if rule_value.comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_PRESENT:
+        if atom.comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_PRESENT:
             return context_value is not None
 
         if context_value is None:
             return False
 
-        if rule_value.comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_EQUALS:
-            return evaluate_equals(rule_value.comparison_value, context_value)
-        elif rule_value.comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_NOT_EQUALS:
-            return not evaluate_equals(rule_value.comparison_value, context_value)
-        elif rule_value.comparison_operator in (
+        if atom.comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_EQUALS:
+            return evaluate_equals(atom.comparison_value, context_value)
+        elif atom.comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_NOT_EQUALS:
+            return not evaluate_equals(atom.comparison_value, context_value)
+        elif atom.comparison_operator in (
             ComparisonOperator.COMPARISON_OPERATOR_LESS_THAN,
             ComparisonOperator.COMPARISON_OPERATOR_LESS_THAN_OR_EQUALS,
             ComparisonOperator.COMPARISON_OPERATOR_GREATER_THAN,
             ComparisonOperator.COMPARISON_OPERATOR_GREATER_THAN_OR_EQUALS,
         ):
             return evaluate_number_comparator(
-                rule_value.comparison_operator, rule_value.comparison_value, context_value
+                atom.comparison_operator, atom.comparison_value, context_value
             )
-        elif rule_value.comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_CONTAINED_WITHIN:
-            return evaluate_contained_within(rule_value.comparison_value, context_value)
-        elif rule_value.comparison_operator in (
+        elif atom.comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_CONTAINED_WITHIN:
+            return evaluate_contained_within(atom.comparison_value, context_value)
+        elif atom.comparison_operator in (
             ComparisonOperator.COMPARISON_OPERATOR_STARTS_WITH,
             ComparisonOperator.COMPARISON_OPERATOR_ENDS_WITH,
             ComparisonOperator.COMPARISON_OPERATOR_CONTAINS,
         ):
             return evaluate_string_comparator(
-                rule_value.comparison_operator, rule_value.comparison_value, context_value
+                atom.comparison_operator, atom.comparison_value, context_value
             )
         else:
             raise EvaluationError("Unknown comparison operator")
     elif rule_type == "call_expression":
-        if rule_value.WhichOneof("function") == "bucket":
-            return evaluate_bucket(rule_value.bucket, namespace, config_name, context)
+        expr = rule.call_expression
+        if expr.WhichOneof("function") == "bucket":
+            return evaluate_bucket(expr.bucket, namespace, config_name, context)
         else:
             raise EvaluationError("Unknown CallExpression function type")
     else:
