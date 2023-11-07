@@ -53,33 +53,42 @@ class CachedDistributionClient(Client):
             self._enabled = True
             self.queue: queue.Queue[FlagEvaluationEvent] = queue.Queue()
 
-        def stop(self):
+        def stop(self) -> None:
             self._enabled = False
 
-        def add_event(self, event: FlagEvaluationEvent):
+        def add_event(self, event: FlagEvaluationEvent) -> None:
             self.queue.put(event)
 
-        def upload_events(self):
-            if self.events:
+        def _upload_events(self) -> None:
+            if len(self.events) > 0:
                 self.dist_client.SendFlagEvaluationMetrics(
                     SendFlagEvaluationMetricsRequest(events=self.events, session_key=self.session_key)
                 )
+                self.events = []
+        
+        def _accept_event(self) -> None:
+            try:
+                self.events.append(self.queue.get(block=False))
+            except queue.Empty:
+                pass
 
-        def run(self):
+        def run(self) -> None:
             last_upload_time = time.time()
             while self._enabled:
-                try:
-                    event = self.queue.get(block=False)
-                except queue.Empty:
-                    continue
-                self.events.append(event)
+                self._accept_event()
                 now = time.time()
-                if (len(self.events) > self.batch_size) or (now - last_upload_time > self.upload_interval):
+                if (len(self.events) >= self.batch_size) or (now - last_upload_time > self.upload_interval):
                     try:
-                        self.upload_events()
+                        self._upload_events()
                         last_upload_time = now
                     except Exception:
-                        log.warning("Failed to upload config evaluation events.")
+                        log.exception("Failed to upload config evaluation events.")
+            
+            while not self.queue.empty():
+                self._accept_event()
+                if len(self.events) >= self.batch_size:
+                    self._upload_events()
+            self._upload_events()
 
     def __init__(
         self,
@@ -102,7 +111,7 @@ class CachedDistributionClient(Client):
             self.initialize_client(credentials)
             if self._client:
                 self.events_batcher = self.EventsBatcher(
-                    self._client, self.session_key, upload_interval_ms=5 * 1_000, batch_size=100
+                    self._client, self.session_key, upload_interval_ms=5 * 1_000, batch_size=1_000
                 )
                 self.events_batcher.start()
 
@@ -226,7 +235,6 @@ class CachedDistributionClient(Client):
         super().close()
         if self._client and self.session_key:
             if self.events_batcher:
-                self.events_batcher.upload_events()
                 self.events_batcher.stop()
-                self.events_batcher.join(timeout=5)
+                self.events_batcher.join(timeout=1)
             self._client.DeregisterClient(DeregisterClientRequest(session_key=self.session_key))

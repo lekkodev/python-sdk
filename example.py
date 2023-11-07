@@ -74,16 +74,17 @@ if __name__ == "__main__":
                         val = MessageToDict(lekko_client.get_proto_by_type(args.namespace, args.config, {}, msg_type))
                     else:
                         val = MessageToDict(lekko_client.get_proto(args.namespace, args.config, {}))
-            #print(f"Got {val} for config {args.namespace}/{args.config}")
+            # print(f"Got {val} for config {args.namespace}/{args.config}")
         except LekkoError as e:
             print(f"Failed to get config: {e}")
             if e.__cause__:
                 print(f"Caused by: {e.__cause__}")
         time.sleep(args.sleep)
-        if not args.f and count > args.n:
+        if not args.f and count >= args.n:
             break
     
     total_ms = (time.perf_counter_ns() - start) / 1_000_000
     print(f"total ms: {total_ms}")
     print(f"count: {count}")
     print(f"qps: {count / (total_ms / 1_000)}")
+    lekko_client.close()
