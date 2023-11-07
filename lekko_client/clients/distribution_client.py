@@ -65,7 +65,7 @@ class CachedDistributionClient(Client):
                     SendFlagEvaluationMetricsRequest(events=self.events, session_key=self.session_key)
                 )
                 self.events = []
-        
+
         def _accept_event(self) -> None:
             try:
                 self.events.append(self.queue.get(block=False))
@@ -83,7 +83,7 @@ class CachedDistributionClient(Client):
                         last_upload_time = now
                     except Exception:
                         log.exception("Failed to upload config evaluation events.")
-            
+
             while not self.queue.empty():
                 self._accept_event()
                 if len(self.events) >= self.batch_size:
