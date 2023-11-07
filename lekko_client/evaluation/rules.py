@@ -16,7 +16,9 @@ from lekko_client.gen.lekko.rules.v1beta3.rules_pb2 import (
 from lekko_client.models import ClientContext
 
 
-def evaluate_rule(rule: Rule, namespace: str, config_name: str, context: ClientContext = None) -> bool:
+def evaluate_rule(
+    rule: Rule, namespace: str, config_name: str, context: ClientContext = None
+) -> bool:
     if not rule:
         raise EvaluationError("Empty rule")
 
@@ -36,9 +38,15 @@ def evaluate_rule(rule: Rule, namespace: str, config_name: str, context: ClientC
 
         logical_operator = logical_expression.logical_operator
         return (
-            all(evaluate_rule(r, namespace, config_name, context) for r in logical_expression.rules)
+            all(
+                evaluate_rule(r, namespace, config_name, context)
+                for r in logical_expression.rules
+            )
             if logical_operator == LogicalOperator.LOGICAL_OPERATOR_AND
-            else any(evaluate_rule(r, namespace, config_name, context) for r in logical_expression.rules)
+            else any(
+                evaluate_rule(r, namespace, config_name, context)
+                for r in logical_expression.rules
+            )
         )
     elif rule_type == "atom":
         atom = rule.atom
@@ -53,7 +61,10 @@ def evaluate_rule(rule: Rule, namespace: str, config_name: str, context: ClientC
 
         if atom.comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_EQUALS:
             return evaluate_equals(atom.comparison_value, context_value)
-        elif atom.comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_NOT_EQUALS:
+        elif (
+            atom.comparison_operator
+            == ComparisonOperator.COMPARISON_OPERATOR_NOT_EQUALS
+        ):
             return not evaluate_equals(atom.comparison_value, context_value)
         elif atom.comparison_operator in (
             ComparisonOperator.COMPARISON_OPERATOR_LESS_THAN,
@@ -61,21 +72,28 @@ def evaluate_rule(rule: Rule, namespace: str, config_name: str, context: ClientC
             ComparisonOperator.COMPARISON_OPERATOR_GREATER_THAN,
             ComparisonOperator.COMPARISON_OPERATOR_GREATER_THAN_OR_EQUALS,
         ):
-            return evaluate_number_comparator(atom.comparison_operator, atom.comparison_value, context_value)
-        elif atom.comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_CONTAINED_WITHIN:
+            return evaluate_number_comparator(
+                atom.comparison_operator, atom.comparison_value, context_value
+            )
+        elif (
+            atom.comparison_operator
+            == ComparisonOperator.COMPARISON_OPERATOR_CONTAINED_WITHIN
+        ):
             return evaluate_contained_within(atom.comparison_value, context_value)
         elif atom.comparison_operator in (
             ComparisonOperator.COMPARISON_OPERATOR_STARTS_WITH,
             ComparisonOperator.COMPARISON_OPERATOR_ENDS_WITH,
             ComparisonOperator.COMPARISON_OPERATOR_CONTAINS,
         ):
-            return evaluate_string_comparator(atom.comparison_operator, atom.comparison_value, context_value)
+            return evaluate_string_comparator(
+                atom.comparison_operator, atom.comparison_value, context_value
+            )
         else:
             raise EvaluationError("Unknown comparison operator")
     elif rule_type == "call_expression":
-        call_expression = rule.call_expression
-        if call_expression.WhichOneof("function") == "bucket":
-            return evaluate_bucket(call_expression.bucket, namespace, config_name, context)
+        expr = rule.call_expression
+        if expr.WhichOneof("function") == "bucket":
+            return evaluate_bucket(expr.bucket, namespace, config_name, context)
         else:
             raise EvaluationError("Unknown CallExpression function type")
     else:
@@ -98,7 +116,9 @@ def evaluate_equals(rule_value: Value, context_value: LekkoValue) -> bool:
 
 
 def evaluate_string_comparator(
-    comparison_operator: ComparisonOperator.ValueType, rule_value: Value, context_value: LekkoValue
+    comparison_operator: ComparisonOperator.ValueType,
+    rule_value: Value,
+    context_value: LekkoValue,
 ) -> bool:
     rule_str = get_string(rule_value)
     context_str = get_string(context_value)
@@ -124,18 +144,26 @@ def get_string(value: Value | LekkoValue) -> str:
 
 
 def evaluate_number_comparator(
-    comparison_operator: ComparisonOperator.ValueType, rule_value: Value, context_value: LekkoValue
+    comparison_operator: ComparisonOperator.ValueType,
+    rule_value: Value,
+    context_value: LekkoValue,
 ) -> bool:
     rule_num = get_number(rule_value)
     context_num = get_number(context_value)
 
     if comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_LESS_THAN:
         return context_num < rule_num
-    elif comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_LESS_THAN_OR_EQUALS:
+    elif (
+        comparison_operator
+        == ComparisonOperator.COMPARISON_OPERATOR_LESS_THAN_OR_EQUALS
+    ):
         return context_num <= rule_num
     elif comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_GREATER_THAN:
         return context_num > rule_num
-    elif comparison_operator == ComparisonOperator.COMPARISON_OPERATOR_GREATER_THAN_OR_EQUALS:
+    elif (
+        comparison_operator
+        == ComparisonOperator.COMPARISON_OPERATOR_GREATER_THAN_OR_EQUALS
+    ):
         return context_num >= rule_num
     else:
         raise EvaluationError("Unknown numerical comparison operator")
@@ -155,10 +183,18 @@ def evaluate_contained_within(rule_value: Value, context_value: LekkoValue) -> b
 
     # TODO: this will throw if there's a type mismatch, which means that all items in rule list must be of same type
     # This is consistent with other language SDKs, but we should consider just returning False on type mismatch
-    return any(evaluate_equals(list_elem_val, context_value) for list_elem_val in rule_value.list_value.values)
+    return any(
+        evaluate_equals(list_elem_val, context_value)
+        for list_elem_val in rule_value.list_value.values
+    )
 
 
-def evaluate_bucket(bucket_f: CallExpression.Bucket, namespace: str, config_name: str, context: ClientContext) -> bool:
+def evaluate_bucket(
+    bucket_f: CallExpression.Bucket,
+    namespace: str,
+    config_name: str,
+    context: ClientContext,
+) -> bool:
     ctx_key = bucket_f.context_key
     value = context.get(ctx_key) if context else None
     if not value:
@@ -181,6 +217,11 @@ def evaluate_bucket(bucket_f: CallExpression.Bucket, namespace: str, config_name
     else:
         raise EvaluationError("Unsupported value type for bucket")
 
-    bytes_frags = [bytes(namespace, "utf-8"), bytes(config_name, "utf-8"), bytes(ctx_key, "utf-8"), bytes_buffer]
+    bytes_frags = [
+        bytes(namespace, "utf-8"),
+        bytes(config_name, "utf-8"),
+        bytes(ctx_key, "utf-8"),
+        bytes_buffer,
+    ]
     result = xxh32(b"".join(bytes_frags), 0).intdigest()
     return result % 100000 <= bucket_f.threshold
