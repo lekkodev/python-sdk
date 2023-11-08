@@ -91,9 +91,11 @@ def evaluate_rule(
         else:
             raise EvaluationError("Unknown comparison operator")
     elif rule_type == "call_expression":
-        expr = rule.call_expression
-        if expr.WhichOneof("function") == "bucket":
-            return evaluate_bucket(expr.bucket, namespace, config_name, context)
+        call_expression = rule.call_expression
+        if call_expression.WhichOneof("function") == "bucket":
+            return evaluate_bucket(
+                call_expression.bucket, namespace, config_name, context
+            )
         else:
             raise EvaluationError("Unknown CallExpression function type")
     else:
