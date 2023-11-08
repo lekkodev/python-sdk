@@ -13,5 +13,5 @@ __all__ = [
     "SidecarClient",
     "CachedBackendClient",
     "CachedGitClient",
-    "Client", 
+    "Client",
 ]

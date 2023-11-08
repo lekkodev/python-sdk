@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import grpc
 from grpc_interceptor import ClientCallDetails, ClientInterceptor
@@ -40,7 +40,9 @@ class ApiKeyInterceptor(ClientInterceptor):
     def __init__(self, api_key: str) -> None:
         self.api_key = api_key
 
-    def intercept(self, method, request_or_iterator, call_details) -> ClientInterceptorReturnType:
+    def intercept(
+        self, method: Callable, request_or_iterator: Any, call_details: grpc.ClientCallDetails
+    ) -> ClientInterceptorReturnType:
         new_details = ClientCallDetails(
             call_details.method,
             call_details.timeout,

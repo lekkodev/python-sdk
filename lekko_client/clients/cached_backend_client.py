@@ -27,10 +27,10 @@ class CachedBackendClient(CachedDistributionClient):
             self.refresh_interval = refresh_interval_ms
             self._enabled = True
 
-        def stop(self):
+        def stop(self) -> None:
             self._enabled = False
 
-        def run(self):
+        def run(self) -> None:
             while self._enabled:
                 if self.client.should_update_store():
                     self.client.update_store()
@@ -46,14 +46,14 @@ class CachedBackendClient(CachedDistributionClient):
         context: Optional[Dict[str, Any]] = None,
         credentials: grpc.ChannelCredentials = grpc.ssl_channel_credentials(),
         update_interval_ms: int = 1000,
-    ):
+    ) -> None:
         self.update_interval_ms = update_interval_ms
         self.timeout = None
         self.closed = False
         self.initialized_event = Event()
         super().__init__(uri, owner_name, repo_name, store, api_key, context, credentials)
 
-    def initialize(self):
+    def initialize(self) -> None:
         super().initialize()
         self.refresh_thread = CachedBackendClient.RefreshThread(self, self.update_interval_ms)
         self.refresh_thread.start()
@@ -65,7 +65,7 @@ class CachedBackendClient(CachedDistributionClient):
             GetRepositoryContentsRequest(repo_key=self.repository, session_key=self.session_key)
         )
 
-    def update_store(self):
+    def update_store(self) -> None:
         self.load()
         self.initialized_event.set()
 
@@ -83,7 +83,7 @@ class CachedBackendClient(CachedDistributionClient):
         current_sha = self.store.commit_sha
         return current_sha != version_response.commit_sha
 
-    def close(self):
+    def close(self) -> None:
         super().close()
         self.refresh_thread.stop()
         self.initialized_event.clear()
