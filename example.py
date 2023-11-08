@@ -56,7 +56,7 @@ if __name__ == "__main__":
             elif args.config_type == "int":
                 val = lekko_client.get_int(args.namespace, args.config, {})
             elif args.config_type == "str":
-                val = lekko_client.get_string(args.namespace, args.config, {"env": "dev"})
+                val = lekko_client.get_string(args.namespace, args.config, {})
             elif args.config_type == "json":
                 val = lekko_client.get_json(args.namespace, args.config, {})
             elif args.config_type == "float":
@@ -74,7 +74,7 @@ if __name__ == "__main__":
                         val = MessageToDict(lekko_client.get_proto_by_type(args.namespace, args.config, {}, msg_type))
                     else:
                         val = MessageToDict(lekko_client.get_proto(args.namespace, args.config, {}))
-            print(f"Got {val} for config {args.namespace}/{args.config}")
+            # print(f"Got {val} for config {args.namespace}/{args.config}")
         except LekkoError as e:
             print(f"Failed to get config: {e}")
             if e.__cause__:
