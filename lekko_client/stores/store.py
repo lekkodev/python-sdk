@@ -8,7 +8,7 @@ from lekko_client.models import FeatureData
 
 
 class Store(ABC):
-    def __init__(self):
+    def __init__(self) -> None:
         self._commit_sha = ""
         self._content_hash = ""
 
@@ -45,17 +45,17 @@ class Store(ABC):
     def content_hash(self) -> str:
         return self._content_hash
 
-    def should_update(self, contents: GetRepositoryContentsResponse, content_hash: str):
+    def should_update(self, contents: GetRepositoryContentsResponse, content_hash: str) -> bool:
         ret = contents.commit_sha != self.commit_sha or content_hash != self.content_hash
         return ret
 
     @classmethod
-    def sort_contents(cls, contents: GetRepositoryContentsResponse):
+    def sort_contents(cls, contents: GetRepositoryContentsResponse) -> GetRepositoryContentsResponse:
         for ns in contents.namespaces:
             ns.features.sort(key=lambda cfg: cfg.name)
         contents.namespaces.sort(key=lambda ns: ns.name)
         return contents
 
     @classmethod
-    def hash_contents(cls, contents: GetRepositoryContentsResponse):
+    def hash_contents(cls, contents: GetRepositoryContentsResponse) -> str:
         return sha256(contents.SerializeToString()).hexdigest()

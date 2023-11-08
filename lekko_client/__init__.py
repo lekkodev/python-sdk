@@ -100,7 +100,7 @@ def initialize(config: Config) -> Client:
         return __client
 
 
-def set_client(client: Client):
+def set_client(client: Client) -> None:
     global __client
     with __client_lock:
         if __client:
@@ -108,7 +108,7 @@ def set_client(client: Client):
         __client = client
 
 
-def close():
+def close() -> None:
     global __client
     with __client_lock:
         if __client:

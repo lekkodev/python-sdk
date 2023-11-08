@@ -6,3 +6,12 @@ from lekko_client.clients.config_client import (  # noqa
     ConfigServiceClient,
     SidecarClient,
 )
+
+__all__ = [
+    "APIClient",
+    "ConfigServiceClient",
+    "SidecarClient",
+    "CachedBackendClient",
+    "CachedGitClient",
+    "Client",
+]

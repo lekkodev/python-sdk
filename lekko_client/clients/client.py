@@ -38,7 +38,7 @@ class Client(ABC):
         ...
 
     @abstractmethod
-    def get_json(self, namespace: str, key: str, context: Dict[str, Any]) -> dict:
+    def get_json(self, namespace: str, key: str, context: Dict[str, Any]) -> dict[str, Any]:
         ...
 
     @abstractmethod
@@ -61,5 +61,5 @@ class Client(ABC):
         ...
 
     @abstractmethod
-    def close(self):
+    def close(self) -> None:
         ...

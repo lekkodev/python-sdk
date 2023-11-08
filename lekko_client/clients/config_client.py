@@ -76,7 +76,7 @@ class ConfigServiceClient(Client):
             # TODO:SAM - re-registering shouldn't cause errors in the future
             pass
 
-    def close(self):
+    def close(self) -> None:
         super().close()
         self._client.Deregister(DeregisterRequest())
 

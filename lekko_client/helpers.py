@@ -1,14 +1,15 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import grpc
 from grpc_interceptor import ClientCallDetails, ClientInterceptor
+from grpc_interceptor.client import ClientInterceptorReturnType
 
 from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import ContextKey
 from lekko_client.gen.lekko.client.v1beta1.configuration_service_pb2 import Value
 from lekko_client.models import ClientContext
 
 
-def convert_context(context: dict) -> ClientContext:
+def convert_context(context: dict[str, Any]) -> ClientContext:
     def convert_value(val: Any) -> Value:
         if isinstance(val, bool):
             return Value(bool_value=val)
@@ -36,10 +37,12 @@ def get_context_keys(context: Optional[ClientContext] = None) -> List[ContextKey
 class ApiKeyInterceptor(ClientInterceptor):
     """A test interceptor that injects invocation metadata."""
 
-    def __init__(self, api_key):
+    def __init__(self, api_key: str) -> None:
         self.api_key = api_key
 
-    def intercept(self, method, request_or_iterator, call_details):
+    def intercept(
+        self, method: Callable, request_or_iterator: Any, call_details: grpc.ClientCallDetails
+    ) -> ClientInterceptorReturnType:
         new_details = ClientCallDetails(
             call_details.method,
             call_details.timeout,
