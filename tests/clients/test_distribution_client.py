@@ -114,8 +114,8 @@ def test_get_proto(mock_distribution_client, test_feature_no_constraints):
             assert any_proto == mock_distribution_client.get_proto("namespace", "key", {})
 
 
-# TODO: Improve these tests
-def test_add_event_sample(mock_distribution_client):
+# TODO: Improve these tests - transition to more comprehensive black box test cases
+def test_add_event_sample_nopass(mock_distribution_client):
     events_batcher = CachedDistributionClient.EventsBatcher(mock_distribution_client, "", 0, 0)
     for _ in range(10000):
         events_batcher.add_event(FlagEvaluationEvent())
@@ -125,6 +125,32 @@ def test_add_event_sample(mock_distribution_client):
     with mock.patch("random.random", return_value=1):
         events_batcher.add_event(FlagEvaluationEvent())
         assert events_batcher.queue.qsize() == 10000
+
+
+def test_add_event_sample_pass(mock_distribution_client):
+    events_batcher = CachedDistributionClient.EventsBatcher(mock_distribution_client, "", 0, 0)
+    for _ in range(10000):
+        events_batcher.add_event(FlagEvaluationEvent())
+
+    assert events_batcher.queue.qsize() == 10000
+    # Mock random to simulate sample rate of 1
+    with mock.patch("random.random", return_value=0):
+        events_batcher.add_event(FlagEvaluationEvent())
+        assert events_batcher.queue.qsize() == 10001
+
+
+def test_accept_event(mock_distribution_client):
+    events_batcher = CachedDistributionClient.EventsBatcher(mock_distribution_client, "", 0, 0)
+    events_batcher.add_event(FlagEvaluationEvent())
+    events_batcher._accept_event()
+    assert len(events_batcher.events) == 1
+
+
+def test_accept_event_sentinel(mock_distribution_client):
+    events_batcher = CachedDistributionClient.EventsBatcher(mock_distribution_client, "", 0, 0)
+    events_batcher.queue.put(None)
+    events_batcher._accept_event()
+    assert len(events_batcher.events) == 0
 
 
 def test_stop_events_batcher(mock_distribution_client):
