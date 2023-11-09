@@ -10,6 +10,7 @@ from lekko_client.clients.config_client import AnyProto
 from lekko_client.clients.distribution_client import CachedDistributionClient
 from lekko_client.evaluation.evaluation import EvaluationResult
 from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
+    FlagEvaluationEvent,
     RepositoryKey,
 )
 from lekko_client.gen.lekko.feature.v1beta1.feature_pb2 import Feature
@@ -111,3 +112,23 @@ def test_get_proto(mock_distribution_client, test_feature_no_constraints):
 
         with mock.patch("google.protobuf.symbol_database.SymbolDatabase.GetSymbol", side_effect=KeyError):
             assert any_proto == mock_distribution_client.get_proto("namespace", "key", {})
+
+
+# TODO: Improve these tests
+def test_add_event_sample(mock_distribution_client):
+    events_batcher = CachedDistributionClient.EventsBatcher(mock_distribution_client, "", 0, 0)
+    for _ in range(10000):
+        events_batcher.add_event(FlagEvaluationEvent())
+
+    assert events_batcher.queue.qsize() == 10000
+    # Mock random to simulate sample rate of 0
+    with mock.patch("random.random", return_value=1):
+        events_batcher.add_event(FlagEvaluationEvent())
+        assert events_batcher.queue.qsize() == 10000
+
+
+def test_stop_events_batcher(mock_distribution_client):
+    events_batcher = CachedDistributionClient.EventsBatcher(mock_distribution_client, "", 0, 0)
+    events_batcher.stop()
+    # Check for termination sentinel value
+    assert events_batcher.queue.get_nowait() is None
