@@ -1,6 +1,7 @@
 import json
 import logging
 import queue
+import random
 import time
 from abc import abstractmethod
 from datetime import datetime
@@ -37,6 +38,9 @@ from lekko_client.stores.store import Store
 
 log = logging.getLogger(__name__)
 
+EVENT_QUEUE_BREAKPOINT = 10000
+EVENT_SAMPLE_RATE = 0.1
+
 
 class CachedDistributionClient(Client):
     class EventsBatcher(Thread):
@@ -50,13 +54,15 @@ class CachedDistributionClient(Client):
             self.batch_size = batch_size
             self.session_key = session_key
             self.events: List[FlagEvaluationEvent] = []
-            self._enabled = True
-            self.queue: queue.Queue[FlagEvaluationEvent] = queue.Queue()
+            self.queue: queue.Queue[Optional[FlagEvaluationEvent]] = queue.Queue()
 
         def stop(self) -> None:
-            self._enabled = False
+            self.queue.put(None)  # Termination signal to stop waiting on get
 
         def add_event(self, event: FlagEvaluationEvent) -> None:
+            # If backlog is large, sample events to conserve memory usage
+            if self.queue.qsize() >= EVENT_QUEUE_BREAKPOINT and random.random() > EVENT_SAMPLE_RATE:
+                return
             self.queue.put(event)
 
         def _upload_events(self) -> None:
@@ -66,16 +72,17 @@ class CachedDistributionClient(Client):
                 )
                 self.events = []
 
-        def _accept_event(self) -> None:
-            try:
-                self.events.append(self.queue.get(block=False))
-            except queue.Empty:
-                pass
+        def _accept_event(self) -> bool:
+            # Block until an event is ready
+            event = self.queue.get()
+            if event is None:  # Termination signal
+                return False
+            self.events.append(event)
+            return True
 
         def run(self) -> None:
             last_upload_time = time.time()
-            while self._enabled:
-                self._accept_event()
+            while self._accept_event():
                 now = time.time()
                 if (len(self.events) >= self.batch_size) or (now - last_upload_time > self.upload_interval):
                     try:
