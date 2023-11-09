@@ -1,6 +1,7 @@
 import json
 import logging
 import queue
+import random
 import time
 from abc import abstractmethod
 from datetime import datetime
@@ -51,12 +52,18 @@ class CachedDistributionClient(Client):
             self.session_key = session_key
             self.events: List[FlagEvaluationEvent] = []
             self._enabled = True
-            self.queue: queue.Queue[FlagEvaluationEvent] = queue.Queue()
+            self.queue: queue.Queue[Optional[FlagEvaluationEvent]] = queue.Queue()
 
         def stop(self) -> None:
             self._enabled = False
+            self.queue.put(None)  # Termination signal to stop waiting on get
 
         def add_event(self, event: FlagEvaluationEvent) -> None:
+            # If backlog is large, sample events to conserve memory usage
+            if self.queue.qsize() >= 10000:
+                if random.random() < 0.1:
+                    self.queue.put(event)
+                return
             self.queue.put(event)
 
         def _upload_events(self) -> None:
@@ -67,10 +74,11 @@ class CachedDistributionClient(Client):
                 self.events = []
 
         def _accept_event(self) -> None:
-            try:
-                self.events.append(self.queue.get(block=False))
-            except queue.Empty:
-                pass
+            # Block until an event is ready
+            event = self.queue.get()
+            if event is None:  # Termination signal
+                return
+            self.events.append(event)
 
         def run(self) -> None:
             last_upload_time = time.time()
