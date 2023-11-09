@@ -13,7 +13,7 @@ from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
 # Test that initialization doesn't cause errors
 def test_init():
     with mock.patch.object(CachedGitClient, "load_contents", lambda _: GetRepositoryContentsResponse()):
-        with mock.patch("watchdog.observers.Observer", spec_set=Observer):
+        with mock.patch("lekko_client.clients.cached_git_client.Observer", spec_set=Observer):
             try:
                 lekko_client.initialize(
                     lekko_client.CachedGitConfig(
