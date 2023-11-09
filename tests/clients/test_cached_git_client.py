@@ -1,7 +1,8 @@
 from unittest import mock
 
-import lekko_client
 import pytest
+
+import lekko_client
 from lekko_client.clients.cached_git_client import CachedGitClient
 from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
     GetRepositoryContentsResponse,
@@ -19,5 +20,5 @@ def test_init():
                     git_repo_path="",
                 )
             )
-        except:
+        except Exception:
             pytest.fail("cached git client initialization failed")
