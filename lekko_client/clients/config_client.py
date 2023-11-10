@@ -38,7 +38,7 @@ class ConfigServiceClient(Client):
     class JsonBytes(bytes):
         pass
 
-    ReturnType = TypeVar("ReturnType", str, float, int, bool, dict, AnyProto, JsonBytes)
+    ReturnType = TypeVar("ReturnType", str, float, int, bool, dict[str, Any], AnyProto, JsonBytes)
 
     _TYPE_MAPPING: Dict[Type, Tuple[str, Type]] = {
         bool: ("GetBoolValue", GetBoolValueRequest),
@@ -80,23 +80,23 @@ class ConfigServiceClient(Client):
         super().close()
         self._client.Deregister(DeregisterRequest())
 
-    def get_bool(self, namespace: str, key: str, context: Dict[str, Any]) -> bool:
+    def get_bool(self, namespace: str, key: str, context: dict[str, Any]) -> bool:
         return self._get(namespace, key, context, bool)
 
-    def get_int(self, namespace: str, key: str, context: Dict[str, Any]) -> int:
+    def get_int(self, namespace: str, key: str, context: dict[str, Any]) -> int:
         return self._get(namespace, key, context, int)
 
-    def get_float(self, namespace: str, key: str, context: Dict[str, Any]) -> float:
+    def get_float(self, namespace: str, key: str, context: dict[str, Any]) -> float:
         return self._get(namespace, key, context, float)
 
-    def get_string(self, namespace: str, key: str, context: Dict[str, Any]) -> str:
+    def get_string(self, namespace: str, key: str, context: dict[str, Any]) -> str:
         return self._get(namespace, key, context, str)
 
-    def get_json(self, namespace: str, key: str, context: Dict[str, Any]) -> dict:
+    def get_json(self, namespace: str, key: str, context: dict[str, Any]) -> dict[str, Any]:
         json_bytes = self._get(namespace, key, context, ConfigServiceClient.JsonBytes)
         return json.loads(json_bytes.decode("utf-8"))
 
-    def get_proto(self, namespace: str, key: str, context: Dict[str, Any]) -> ProtoMessage:
+    def get_proto(self, namespace: str, key: str, context: dict[str, Any]) -> ProtoMessage:
         val = self._get_proto(namespace, key, context)
         db = proto_symbol_database.SymbolDatabase(pool=proto_descriptor_pool.Default())
         try:
@@ -140,7 +140,7 @@ class ConfigServiceClient(Client):
                 raise MismatchedType(e.details()) from e
             raise
 
-    def _get_proto(self, namespace: str, key: str, context: Dict[str, Any]) -> AnyProto:
+    def _get_proto(self, namespace: str, key: str, context: dict[str, Any]) -> AnyProto:
         ctx = self.context | context
         try:
             req = GetProtoValueRequest(

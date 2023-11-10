@@ -22,6 +22,7 @@ import google.protobuf.descriptor
 import google.protobuf.internal.containers
 import google.protobuf.internal.enum_type_wrapper
 import google.protobuf.message
+import google.protobuf.struct_pb2
 import lekko_client.gen.lekko.rules.v1beta2.rules_pb2
 import lekko_client.gen.lekko.rules.v1beta3.rules_pb2
 import sys
@@ -75,11 +76,14 @@ class Feature(google.protobuf.message.Message):
     DESCRIPTION_FIELD_NUMBER: builtins.int
     TREE_FIELD_NUMBER: builtins.int
     TYPE_FIELD_NUMBER: builtins.int
+    METADATA_FIELD_NUMBER: builtins.int
     key: builtins.str
     description: builtins.str
     @property
     def tree(self) -> global___Tree: ...
     type: global___FeatureType.ValueType
+    @property
+    def metadata(self) -> google.protobuf.struct_pb2.Struct: ...
     def __init__(
         self,
         *,
@@ -87,9 +91,10 @@ class Feature(google.protobuf.message.Message):
         description: builtins.str = ...,
         tree: global___Tree | None = ...,
         type: global___FeatureType.ValueType = ...,
+        metadata: google.protobuf.struct_pb2.Struct | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["tree", b"tree"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["description", b"description", "key", b"key", "tree", b"tree", "type", b"type"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["metadata", b"metadata", "tree", b"tree"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["description", b"description", "key", b"key", "metadata", b"metadata", "tree", b"tree", "type", b"type"]) -> None: ...
 
 global___Feature = Feature
 

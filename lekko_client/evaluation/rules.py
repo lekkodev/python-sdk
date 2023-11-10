@@ -103,18 +103,22 @@ def evaluate_rule(
 
 
 def evaluate_equals(rule_value: Value, context_value: LekkoValue) -> bool:
-    rule_kind = rule_value.WhichOneof("kind") or ""
-    context_kind = context_value.WhichOneof("kind") or ""
+    rule_kind = rule_value.WhichOneof("kind")
     if rule_kind not in ["bool_value", "string_value", "number_value"]:
         raise EvaluationError("Unsupported rule type for equals operator")
 
-    if rule_kind == "number_value":
-        if context_kind not in ["double_value", "int_value"]:
-            raise EvaluationError("Type mismatch in equals operator rule")
-    elif rule_kind != context_kind:
-        raise EvaluationError("Type mismatch in equals operator rule")
+    context_kind = context_value.WhichOneof("kind")
 
-    return getattr(rule_value, rule_kind) == getattr(context_value, context_kind)
+    if context_kind == rule_kind == "string_value":
+        return rule_value.string_value == context_value.string_value
+    if context_kind == rule_kind == "bool_value":
+        return rule_value.bool_value == context_value.bool_value
+    if rule_kind == "number_value":
+        if context_kind == "double_value":
+            return rule_value.number_value == context_value.double_value
+        if context_kind == "int_value":
+            return rule_value.number_value == context_value.int_value
+    raise EvaluationError(f"Type mismatch in equals operator rule: {rule_kind} and {context_kind}")
 
 
 def evaluate_string_comparator(

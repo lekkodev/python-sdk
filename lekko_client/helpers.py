@@ -42,7 +42,7 @@ class ApiKeyInterceptor(ClientInterceptor):
 
     def intercept(
         self,
-        method: Callable,
+        method: Callable[..., ClientInterceptorReturnType],
         request_or_iterator: Any,
         call_details: grpc.ClientCallDetails,
     ) -> ClientInterceptorReturnType:
