@@ -38,7 +38,7 @@ class Client(ABC):
         ...
 
     @abstractmethod
-    def get_json(self, namespace: str, key: str, context: Dict[str, Any]) -> dict[str, Any]:
+    def get_json(self, namespace: str, key: str, context: Dict[str, Any]) -> Any:
         ...
 
     @abstractmethod

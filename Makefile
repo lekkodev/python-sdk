@@ -32,5 +32,6 @@ bufgen:
 	grep -rl "from lekko.\|import lekko.\|type: lekko.\|lekko." ./lekko_client/gen --include \*.py --include \*.pyi | xargs sed -i'.bak' -E -e 's/([ \[])lekko\./\1lekko_client.gen.lekko./g'
 	rm -f lekko_client/gen/lekko/client/v1beta1/*.bak
 	rm -f lekko_client/gen/lekko/feature/v1beta1/*.bak
+	rm -f lekko_client/gen/lekko/rules/v1beta2/*.bak
 	rm -f lekko_client/gen/lekko/rules/v1beta3/*.bak
 	rm -f lekko_client/gen/lekko/backend/v1beta1/*.bak

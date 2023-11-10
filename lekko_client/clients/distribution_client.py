@@ -215,7 +215,7 @@ class CachedDistributionClient(Client):
 
     def get_proto(self, namespace: str, key: str, context: Dict[str, Any]) -> ProtoMessage:
         val = self.get(namespace, key, context)
-        db = proto_symbol_database.SymbolDatabase(pool=proto_descriptor_pool.Default())
+        db = proto_symbol_database.SymbolDatabase(pool=proto_descriptor_pool.Default())  # type: ignore
         try:
             ret_val = db.GetSymbol(val.type_url.split("/")[1])()
             if val.Unpack(ret_val):

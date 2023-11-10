@@ -40,7 +40,7 @@ class ConfigServiceClient(Client):
 
     ReturnType = TypeVar("ReturnType", str, float, int, bool, dict[str, Any], AnyProto, JsonBytes)
 
-    _TYPE_MAPPING: Dict[Type, Tuple[str, Type]] = {
+    _TYPE_MAPPING: Dict[Type[Any], Tuple[str, Type[Any]]] = {
         bool: ("GetBoolValue", GetBoolValueRequest),
         int: ("GetIntValue", GetIntValueRequest),
         str: ("GetStringValue", GetStringValueRequest),
@@ -92,13 +92,13 @@ class ConfigServiceClient(Client):
     def get_string(self, namespace: str, key: str, context: dict[str, Any]) -> str:
         return self._get(namespace, key, context, str)
 
-    def get_json(self, namespace: str, key: str, context: dict[str, Any]) -> dict[str, Any]:
+    def get_json(self, namespace: str, key: str, context: dict[str, Any]) -> Any:
         json_bytes = self._get(namespace, key, context, ConfigServiceClient.JsonBytes)
         return json.loads(json_bytes.decode("utf-8"))
 
     def get_proto(self, namespace: str, key: str, context: dict[str, Any]) -> ProtoMessage:
         val = self._get_proto(namespace, key, context)
-        db = proto_symbol_database.SymbolDatabase(pool=proto_descriptor_pool.Default())
+        db = proto_symbol_database.SymbolDatabase(pool=proto_descriptor_pool.Default())  # type: ignore
         try:
             ret_val = db.GetSymbol(val.type_url.split("/")[1])()
             if val.Unpack(ret_val):
@@ -132,7 +132,7 @@ class ConfigServiceClient(Client):
                 repo_key=self.repository,
             )
             response = getattr(self._client, fn_name)(req)
-            return response.value
+            return response.value  # type: ignore
         except grpc.RpcError as e:
             if e.code() == grpc.StatusCode.NOT_FOUND:
                 raise FeatureNotFound(e.details()) from e

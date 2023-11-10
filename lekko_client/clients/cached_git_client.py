@@ -7,7 +7,7 @@ import yaml
 from dulwich.errors import NotGitRepository
 from dulwich.object_store import tree_lookup_path
 from dulwich.repo import Repo as GitRepo
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.api import BaseObserver
 
@@ -32,9 +32,8 @@ class CachedGitClient(CachedDistributionClient):
             super().__init__()
             self.client = client
 
-        def on_any_event(self, event):
+        def on_any_event(self, event: FileSystemEvent) -> None:
             self.client.load()
-            return super().on_any_event(event)
 
     def __init__(
         self,
@@ -59,8 +58,8 @@ class CachedGitClient(CachedDistributionClient):
         if self.should_watch:
             event_handler = CachedGitClient.GitFileEventHandler(self)
             self.watcher = Observer()
-            self.watcher.schedule(event_handler, self.path, recursive=True)
-            self.watcher.start()
+            self.watcher.schedule(event_handler, self.path, recursive=True)  # type: ignore
+            self.watcher.start()  # type: ignore
 
     def load_contents(self) -> GetRepositoryContentsResponse:
         try:
@@ -103,10 +102,8 @@ class CachedGitClient(CachedDistributionClient):
                 )
         return features
 
-    def close(self):
+    def close(self) -> None:
         super().close()
-        # if self.events_batcher:
-        # await self.events_batcher.close()
         if self.watcher:
-            self.watcher.stop()
+            self.watcher.stop()  # type: ignore
             self.watcher.join()

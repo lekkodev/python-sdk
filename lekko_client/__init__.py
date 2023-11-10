@@ -4,7 +4,7 @@ import functools
 import logging
 from dataclasses import dataclass
 from threading import RLock
-from typing import Any, Dict, Optional, Type
+from typing import Any, Callable, Dict, Optional, Type, TypeVar, cast
 
 from google.protobuf.message import Message as ProtoMessage
 
@@ -17,7 +17,7 @@ from lekko_client.clients import (
     SidecarClient,
 )
 from lekko_client.constants import LEKKO_API_URL, LEKKO_SIDECAR_URL  # noqa
-from lekko_client.stores import MemoryStore
+from lekko_client.stores.memory import MemoryStore
 
 __version__ = "0.2.0"
 
@@ -116,15 +116,18 @@ def close() -> None:
             __client = None
 
 
-def __get_safe(func):
+TFunc = TypeVar("TFunc", bound=Callable[..., Any])
+
+
+def __get_safe(func: TFunc) -> TFunc:
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         with __client_lock:
             if not __client:
                 raise exceptions.ClientNotInitialized("lekko_client.initialize() must be called prior to using API")
             return func(*args, **kwargs)
 
-    return wrapper
+    return cast(TFunc, wrapper)
 
 
 @__get_safe
@@ -152,7 +155,7 @@ def get_string(namespace: str, key: str, context: Dict[str, Any]) -> str:
 
 
 @__get_safe
-def get_json(namespace: str, key: str, context: Dict[str, Any]) -> dict:
+def get_json(namespace: str, key: str, context: Dict[str, Any]) -> Any:
     assert __client
     return __client.get_json(namespace, key, context)
 
