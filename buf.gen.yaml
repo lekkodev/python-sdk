@@ -4,5 +4,7 @@ plugins:
     out: lekko_client/gen
   - plugin: buf.build/grpc/python
     out: lekko_client/gen
-  - plugin: buf.build/community/nipunn1313-mypy:v3.4.0
+  - plugin: buf.build/community/nipunn1313-mypy
+    out: lekko_client/gen
+  - plugin: buf.build/community/nipunn1313-mypy-grpc
     out: lekko_client/gen

@@ -20,6 +20,7 @@ import collections.abc
 import google.protobuf.descriptor
 import google.protobuf.internal.containers
 import google.protobuf.message
+import google.protobuf.struct_pb2
 import lekko_client.gen.lekko.feature.v1beta1.feature_pb2
 import sys
 
@@ -78,8 +79,8 @@ global___StaticFeature = StaticFeature
 
 @typing_extensions.final
 class FeatureStruct(google.protobuf.message.Message):
-    """Represents everything stored in the feature struct in starlark.
-    i.e. `feature(...)`
+    """Represents everything stored in the config struct in starlark.
+    i.e. `Config(...)`
     """
 
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
@@ -88,6 +89,7 @@ class FeatureStruct(google.protobuf.message.Message):
     DESCRIPTION_FIELD_NUMBER: builtins.int
     DEFAULT_FIELD_NUMBER: builtins.int
     RULES_FIELD_NUMBER: builtins.int
+    METADATA_FIELD_NUMBER: builtins.int
     @property
     def meta(self) -> global___StarMeta: ...
     description: builtins.str
@@ -95,6 +97,8 @@ class FeatureStruct(google.protobuf.message.Message):
     def default(self) -> global___StarExpr: ...
     @property
     def rules(self) -> global___Rules: ...
+    @property
+    def metadata(self) -> google.protobuf.struct_pb2.Struct: ...
     def __init__(
         self,
         *,
@@ -102,9 +106,10 @@ class FeatureStruct(google.protobuf.message.Message):
         description: builtins.str = ...,
         default: global___StarExpr | None = ...,
         rules: global___Rules | None = ...,
+        metadata: google.protobuf.struct_pb2.Struct | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["default", b"default", "meta", b"meta", "rules", b"rules"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["default", b"default", "description", b"description", "meta", b"meta", "rules", b"rules"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["default", b"default", "meta", b"meta", "metadata", b"metadata", "rules", b"rules"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["default", b"default", "description", b"description", "meta", b"meta", "metadata", b"metadata", "rules", b"rules"]) -> None: ...
 
 global___FeatureStruct = FeatureStruct
 

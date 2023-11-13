@@ -83,22 +83,28 @@ def evaluate_rule(rule: Rule, namespace: str, config_name: str, context: ClientC
 
 
 def evaluate_equals(rule_value: Value, context_value: LekkoValue) -> bool:
-    rule_kind = rule_value.WhichOneof("kind") or ""
-    context_kind = context_value.WhichOneof("kind") or ""
+    rule_kind = rule_value.WhichOneof("kind")
     if rule_kind not in ["bool_value", "string_value", "number_value"]:
         raise EvaluationError("Unsupported rule type for equals operator")
 
-    if rule_kind == "number_value":
-        if context_kind not in ["double_value", "int_value"]:
-            raise EvaluationError("Type mismatch in equals operator rule")
-    elif rule_kind != context_kind:
-        raise EvaluationError("Type mismatch in equals operator rule")
+    context_kind = context_value.WhichOneof("kind")
 
-    return getattr(rule_value, rule_kind) == getattr(context_value, context_kind)
+    if context_kind == rule_kind == "string_value":
+        return rule_value.string_value == context_value.string_value
+    if context_kind == rule_kind == "bool_value":
+        return rule_value.bool_value == context_value.bool_value
+    if rule_kind == "number_value":
+        if context_kind == "double_value":
+            return rule_value.number_value == context_value.double_value
+        if context_kind == "int_value":
+            return rule_value.number_value == context_value.int_value
+    raise EvaluationError(f"Type mismatch in equals operator rule: {rule_kind} and {context_kind}")
 
 
 def evaluate_string_comparator(
-    comparison_operator: ComparisonOperator.ValueType, rule_value: Value, context_value: LekkoValue
+    comparison_operator: ComparisonOperator.ValueType,
+    rule_value: Value,
+    context_value: LekkoValue,
 ) -> bool:
     rule_str = get_string(rule_value)
     context_str = get_string(context_value)
@@ -124,7 +130,9 @@ def get_string(value: Value | LekkoValue) -> str:
 
 
 def evaluate_number_comparator(
-    comparison_operator: ComparisonOperator.ValueType, rule_value: Value, context_value: LekkoValue
+    comparison_operator: ComparisonOperator.ValueType,
+    rule_value: Value,
+    context_value: LekkoValue,
 ) -> bool:
     rule_num = get_number(rule_value)
     context_num = get_number(context_value)
@@ -158,7 +166,12 @@ def evaluate_contained_within(rule_value: Value, context_value: LekkoValue) -> b
     return any(evaluate_equals(list_elem_val, context_value) for list_elem_val in rule_value.list_value.values)
 
 
-def evaluate_bucket(bucket_f: CallExpression.Bucket, namespace: str, config_name: str, context: ClientContext) -> bool:
+def evaluate_bucket(
+    bucket_f: CallExpression.Bucket,
+    namespace: str,
+    config_name: str,
+    context: ClientContext,
+) -> bool:
     ctx_key = bucket_f.context_key
     value = context.get(ctx_key) if context else None
     if not value:
@@ -181,6 +194,11 @@ def evaluate_bucket(bucket_f: CallExpression.Bucket, namespace: str, config_name
     else:
         raise EvaluationError("Unsupported value type for bucket")
 
-    bytes_frags = [bytes(namespace, "utf-8"), bytes(config_name, "utf-8"), bytes(ctx_key, "utf-8"), bytes_buffer]
+    bytes_frags = [
+        bytes(namespace, "utf-8"),
+        bytes(config_name, "utf-8"),
+        bytes(ctx_key, "utf-8"),
+        bytes_buffer,
+    ]
     result = xxh32(b"".join(bytes_frags), 0).intdigest()
     return result % 100000 <= bucket_f.threshold

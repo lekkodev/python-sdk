@@ -124,14 +124,14 @@ class CachedDistributionClient(Client):
 
         self.initialize()
 
-    _TYPE_MAPPING: Dict[Type, Type[BoolValue | Int64Value | StringValue | FloatValue]] = {
+    _TYPE_MAPPING: Dict[Type[bool | int | str | float], Type[BoolValue | Int64Value | StringValue | FloatValue]] = {
         bool: BoolValue,
         int: Int64Value,
         str: StringValue,
         float: FloatValue,
     }
 
-    def initialize_client(self, credentials: grpc.ChannelCredentials):
+    def initialize_client(self, credentials: grpc.ChannelCredentials) -> None:
         from lekko_client import __version__
 
         channel = get_grpc_channel(self.uri, self.api_key, credentials)
@@ -192,7 +192,7 @@ class CachedDistributionClient(Client):
         result = self.get(namespace, key, context)
         return_wrapper = self._TYPE_MAPPING[typ]()
         if result.Unpack(return_wrapper):
-            return return_wrapper.value  # type:ignore
+            return return_wrapper.value  # type: ignore
         raise MismatchedType(f"Feature {key} is of type {result.type_url} and cannot be converted to {typ}")
 
     def get_bool(self, namespace: str, key: str, context: Dict[str, Any]) -> bool:
@@ -215,7 +215,7 @@ class CachedDistributionClient(Client):
 
     def get_proto(self, namespace: str, key: str, context: Dict[str, Any]) -> ProtoMessage:
         val = self.get(namespace, key, context)
-        db = proto_symbol_database.SymbolDatabase(pool=proto_descriptor_pool.Default())
+        db = proto_symbol_database.SymbolDatabase(pool=proto_descriptor_pool.Default())  # type: ignore
         try:
             ret_val = db.GetSymbol(val.type_url.split("/")[1])()
             if val.Unpack(ret_val):
@@ -238,7 +238,7 @@ class CachedDistributionClient(Client):
 
         raise MismatchedProtoType(f"Error unpacking from {val.type_url} to {proto_message_type.DESCRIPTOR.name}")
 
-    def close(self):
+    def close(self) -> None:
         super().close()
         if self._client and self.session_key:
             if self.events_batcher:

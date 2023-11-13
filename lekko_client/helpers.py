@@ -41,7 +41,10 @@ class ApiKeyInterceptor(ClientInterceptor):
         self.api_key = api_key
 
     def intercept(
-        self, method: Callable, request_or_iterator: Any, call_details: grpc.ClientCallDetails
+        self,
+        method: Callable[..., ClientInterceptorReturnType],
+        request_or_iterator: Any,
+        call_details: grpc.ClientCallDetails,
     ) -> ClientInterceptorReturnType:
         new_details = ClientCallDetails(
             call_details.method,
@@ -59,7 +62,9 @@ _CHANNELS: Dict[Tuple[str, Optional[str]], grpc.Channel] = {}
 
 
 def get_grpc_channel(
-    url: str, api_key: Optional[str] = None, credentials: Optional[grpc.ChannelCredentials] = None
+    url: str,
+    api_key: Optional[str] = None,
+    credentials: Optional[grpc.ChannelCredentials] = None,
 ) -> grpc.Channel:
     if (url, api_key) not in _CHANNELS:
         if credentials:
