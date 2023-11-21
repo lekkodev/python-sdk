@@ -272,6 +272,16 @@ def convert_to_value(v: Any) -> Value:
             Atom(
                 context_key="age",
                 comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_LESS_THAN,
+                comparison_value=convert_to_value(12.5),
+            ),
+            convert_context({"age": 12}),
+            True,
+            False,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_LESS_THAN,
                 comparison_value=convert_to_value(12),
             ),
             convert_context({"age": 11}),

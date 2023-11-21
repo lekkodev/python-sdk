@@ -139,7 +139,6 @@ def evaluate_number_comparator(
     rule_value: Value,
     context_value: LekkoValue,
 ) -> bool:
-    print("evaluate_number_comparator")
     rule_num = get_number(rule_value)
     context_num = get_number(context_value)
 
