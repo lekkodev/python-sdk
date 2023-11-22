@@ -48,7 +48,7 @@ class APIConfig(Config):
 
 @dataclass(kw_only=True)
 class CachedServerConfig(Config):
-    update_interval_ms: int = 1000
+    update_interval_ms: int = 15 * 1000  # 15s
 
 
 @dataclass(kw_only=True)

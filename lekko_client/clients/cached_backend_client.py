@@ -45,7 +45,8 @@ class CachedBackendClient(CachedDistributionClient):
         api_key: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
         credentials: grpc.ChannelCredentials = grpc.ssl_channel_credentials(),
-        update_interval_ms: int = 1000,
+        *,
+        update_interval_ms: int,
     ) -> None:
         self.update_interval_ms = update_interval_ms
         self.timeout = None
