@@ -4,6 +4,7 @@ import pytest
 from google.protobuf.struct_pb2 import Struct, Value
 
 from lekko_client.evaluation.rules import evaluate_rule
+from lekko_client.exceptions import EvaluationError
 from lekko_client.gen.lekko.rules.v1beta3.rules_pb2 import (
     Atom,
     CallExpression,
@@ -260,12 +261,32 @@ def convert_to_value(v: Any) -> Value:
         ),
         (
             Atom(
+                context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_EQUALS,
+                comparison_value=convert_to_value(["Rome"]),
+            ),
+            convert_context({"city": "Rome"}),
+            False,
+            True,
+        ),
+        (
+            Atom(
                 context_key="age",
                 comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_LESS_THAN,
                 comparison_value=convert_to_value(12),
             ),
             convert_context({"age": 12}),
             False,
+            False,
+        ),
+        (
+            Atom(
+                context_key="age",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_LESS_THAN,
+                comparison_value=convert_to_value(12),
+            ),
+            convert_context({"age": 11.5}),
+            True,
             False,
         ),
         (
@@ -371,6 +392,16 @@ def convert_to_value(v: Any) -> Value:
         (
             Atom(
                 context_key="city",
+                comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_CONTAINED_WITHIN,
+                comparison_value=convert_to_value("Rome"),
+            ),
+            convert_context({"city": "rome"}),
+            False,
+            True,
+        ),
+        (
+            Atom(
+                context_key="city",
                 comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_STARTS_WITH,
                 comparison_value=convert_to_value("Ro"),
             ),
@@ -457,6 +488,49 @@ def test_atom(test_atom, test_context, expected, raises):
             evaluate_rule(rule, "ns1", "config1", test_context)
     else:
         assert evaluate_rule(rule, "ns1", "config1", test_context) == expected
+
+
+def test_invalid_rules() -> None:
+    with pytest.raises(EvaluationError):
+        evaluate_rule(None, "ns1", "config1")
+    with pytest.raises(EvaluationError):
+        evaluate_rule(Rule(), "ns1", "config1")
+    with pytest.raises(EvaluationError):
+        evaluate_rule(
+            Rule(atom=Atom(context_key="foo", comparison_operator=ComparisonOperator.COMPARISON_OPERATOR_UNSPECIFIED)),
+            "ns1",
+            "config1",
+            {"foo": "foo"},
+        )
+    with pytest.raises(EvaluationError):
+        evaluate_rule(Rule(call_expression=CallExpression()), "ns1", "config1")
+    with pytest.raises(EvaluationError):
+        evaluate_rule(Rule(call_expression=CallExpression()), "ns1", "config1")
+
+    assert (
+        evaluate_rule(
+            Rule(call_expression=CallExpression(bucket=CallExpression.Bucket(context_key="key", threshold=50000))),
+            "ns1",
+            "config1",
+        )
+        is False
+    )
+    assert (
+        evaluate_rule(
+            Rule(call_expression=CallExpression(bucket=CallExpression.Bucket(context_key="key", threshold=50000))),
+            "ns1",
+            "config1",
+            {"key": Value()},
+        )
+        is False
+    )
+    with pytest.raises(EvaluationError):
+        evaluate_rule(
+            Rule(call_expression=CallExpression(bucket=CallExpression.Bucket(context_key="key", threshold=50000))),
+            "ns1",
+            "config1",
+            {"key": Value(bool_value=True)},
+        )
 
 
 @pytest.mark.parametrize(

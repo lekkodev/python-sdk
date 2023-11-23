@@ -1,4 +1,5 @@
 import struct
+from typing import assert_never
 
 from google.protobuf.struct_pb2 import Value
 from xxhash import xxh32
@@ -27,6 +28,7 @@ def evaluate_rule(rule: Rule, namespace: str, config_name: str, context: ClientC
     if rule_type == "bool_const":
         return rule.bool_const
     elif rule_type == "not":
+        # have to use `getattr` because `not` is a reserved keyword
         rule_value = getattr(rule, rule_type)
         return not evaluate_rule(rule_value, namespace, config_name, context)
     elif rule_type == "logical_expression":
@@ -74,12 +76,15 @@ def evaluate_rule(rule: Rule, namespace: str, config_name: str, context: ClientC
             raise EvaluationError("Unknown comparison operator")
     elif rule_type == "call_expression":
         call_expression = rule.call_expression
-        if call_expression.WhichOneof("function") == "bucket":
+        fn_type = call_expression.WhichOneof("function")
+        if fn_type is None:
+            raise EvaluationError("Empty call expression")
+        if fn_type == "bucket":
             return evaluate_bucket(call_expression.bucket, namespace, config_name, context)
         else:
-            raise EvaluationError("Unknown CallExpression function type")
+            assert_never(fn_type)
     else:
-        raise EvaluationError("Unknown rule type")
+        assert_never(rule_type)
 
 
 def evaluate_equals(rule_value: Value, context_value: LekkoValue) -> bool:
@@ -150,11 +155,14 @@ def evaluate_number_comparator(
 
 
 def get_number(value: Value | LekkoValue) -> float:
-    value_kind = value.WhichOneof("kind")
-    if value_kind in ["number_value", "int_value", "double_value"]:
-        return float(getattr(value, value_kind))
-    else:
-        raise EvaluationError("get_number caled with non-numeric Value")
+    match [value, value.WhichOneof("kind")]:
+        case [LekkoValue() as lekko_value, "double_value"]:
+            return float(lekko_value.double_value)
+        case [LekkoValue() as lekko_value, "int_value"]:
+            return float(lekko_value.int_value)
+        case [Value() as json_value, "number_value"]:
+            return float(json_value.number_value)
+    raise EvaluationError("get_number caled with non-numeric Value")
 
 
 def evaluate_contained_within(rule_value: Value, context_value: LekkoValue) -> bool:
@@ -184,13 +192,12 @@ def evaluate_bucket(
     if not value_kind:
         return False
 
-    value_val = getattr(value, value_kind)
     if value_kind == "string_value":
-        bytes_buffer = bytes(value_val, "utf-8")
+        bytes_buffer = bytes(value.string_value, "utf-8")
     elif value_kind == "int_value":
-        bytes_buffer = value_val.to_bytes(8, byteorder="big")
+        bytes_buffer = value.int_value.to_bytes(8, byteorder="big")
     elif value_kind == "double_value":
-        bytes_buffer = struct.pack(">d", value_val)
+        bytes_buffer = struct.pack(">d", value.double_value)
     else:
         raise EvaluationError("Unsupported value type for bucket")
 

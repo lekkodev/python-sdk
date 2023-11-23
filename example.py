@@ -10,7 +10,7 @@ import lekko_client
 from lekko_client.exceptions import LekkoError
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(threadName)s - %(levelname)s - %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(threadName)s - %(levelname)s - %(message)s")
     parser = argparse.ArgumentParser()
     parser.add_argument("--apikey", type=str)
     parser.add_argument("--mode", type=str, choices=["sidecar", "api", "cachedapi", "cachedgit"])
@@ -82,7 +82,7 @@ if __name__ == "__main__":
         time.sleep(args.sleep)
         if not args.f and count >= args.n:
             break
-    
+
     total_ms = (time.perf_counter_ns() - start) / 1_000_000
     print(f"total ms: {total_ms}")
     print(f"count: {count}")

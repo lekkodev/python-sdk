@@ -48,7 +48,7 @@ class APIConfig(Config):
 
 @dataclass(kw_only=True)
 class CachedServerConfig(Config):
-    pass
+    update_interval_ms: int = 15 * 1000  # 15s
 
 
 @dataclass(kw_only=True)
@@ -92,8 +92,9 @@ def initialize(config: Config) -> Client:
                     config.owner_name,
                     config.repo_name,
                     MemoryStore(),
-                    config.api_key,
-                    config.context,
+                    api_key=config.api_key,
+                    context=config.context,
+                    update_interval_ms=config.update_interval_ms,
                 )
             case _:
                 raise exceptions.LekkoError("Unknown client mode")

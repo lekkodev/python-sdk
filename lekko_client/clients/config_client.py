@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Optional, Tuple, Type, TypeVar
+from typing import Any, Callable, Dict, Optional, Tuple, Type, TypeVar
 
 import grpc
 from google.protobuf import descriptor_pool as proto_descriptor_pool
@@ -31,23 +31,25 @@ from lekko_client.gen.lekko.client.v1beta1.configuration_service_pb2_grpc import
 )
 from lekko_client.helpers import convert_context, get_grpc_channel
 
+ReturnType = TypeVar("ReturnType")
+
+RequestType = TypeVar(
+    "RequestType",
+    GetBoolValueRequest,
+    GetIntValueRequest,
+    GetStringValueRequest,
+    GetFloatValueRequest,
+    GetJSONValueRequest,
+    GetProtoValueRequest,
+)
+
+
+class JsonBytes(bytes):
+    pass
+
 
 class ConfigServiceClient(Client):
     _channels: Dict[Tuple[str, str], grpc.Channel] = {}
-
-    class JsonBytes(bytes):
-        pass
-
-    ReturnType = TypeVar("ReturnType", str, float, int, bool, dict[str, Any], AnyProto, JsonBytes)
-
-    _TYPE_MAPPING: Dict[Type[Any], Tuple[str, Type[Any]]] = {
-        bool: ("GetBoolValue", GetBoolValueRequest),
-        int: ("GetIntValue", GetIntValueRequest),
-        str: ("GetStringValue", GetStringValueRequest),
-        float: ("GetFloatValue", GetFloatValueRequest),
-        JsonBytes: ("GetJSONValue", GetJSONValueRequest),
-        AnyProto: ("GetProtoValue", GetProtoValueRequest),
-    }
 
     def __init__(
         self,
@@ -81,19 +83,19 @@ class ConfigServiceClient(Client):
         self._client.Deregister(DeregisterRequest())
 
     def get_bool(self, namespace: str, key: str, context: dict[str, Any]) -> bool:
-        return self._get(namespace, key, context, bool)
+        return self._get(namespace, key, context, GetBoolValueRequest, self._client.GetBoolValue).value
 
     def get_int(self, namespace: str, key: str, context: dict[str, Any]) -> int:
-        return self._get(namespace, key, context, int)
+        return self._get(namespace, key, context, GetIntValueRequest, self._client.GetIntValue).value
 
     def get_float(self, namespace: str, key: str, context: dict[str, Any]) -> float:
-        return self._get(namespace, key, context, float)
+        return self._get(namespace, key, context, GetFloatValueRequest, self._client.GetFloatValue).value
 
     def get_string(self, namespace: str, key: str, context: dict[str, Any]) -> str:
-        return self._get(namespace, key, context, str)
+        return self._get(namespace, key, context, GetStringValueRequest, self._client.GetStringValue).value
 
     def get_json(self, namespace: str, key: str, context: dict[str, Any]) -> Any:
-        json_bytes = self._get(namespace, key, context, ConfigServiceClient.JsonBytes)
+        json_bytes = self._get(namespace, key, context, GetJSONValueRequest, self._client.GetJSONValue).value
         return json.loads(json_bytes.decode("utf-8"))
 
     def get_proto(self, namespace: str, key: str, context: dict[str, Any]) -> ProtoMessage:
@@ -121,9 +123,15 @@ class ConfigServiceClient(Client):
 
         raise MismatchedProtoType(f"Error unpacking from {val.type_url} to {proto_message_type.DESCRIPTOR.name}")
 
-    def _get(self, namespace: str, key: str, context: Dict[str, Any], typ: Type[ReturnType]) -> ReturnType:
+    def _get(
+        self,
+        namespace: str,
+        key: str,
+        context: Dict[str, Any],
+        req_type: Type[RequestType],
+        fn: Callable[[RequestType], ReturnType],
+    ) -> ReturnType:
         ctx = self.context | context
-        fn_name, req_type = self._TYPE_MAPPING[typ]
         try:
             req = req_type(
                 key=key,
@@ -131,8 +139,8 @@ class ConfigServiceClient(Client):
                 namespace=namespace,
                 repo_key=self.repository,
             )
-            response = getattr(self._client, fn_name)(req)
-            return response.value  # type: ignore
+            response = fn(req)
+            return response
         except grpc.RpcError as e:
             if e.code() == grpc.StatusCode.NOT_FOUND:
                 raise FeatureNotFound(e.details()) from e
