@@ -15,7 +15,7 @@ from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
 )
 from lekko_client.gen.lekko.feature.v1beta1.feature_pb2 import Feature
 from lekko_client.helpers import convert_context, get_context_keys
-from lekko_client.models import FeatureData
+from lekko_client.models import ConfigData
 
 
 @pytest.mark.parametrize(
@@ -33,7 +33,7 @@ def test_scalar(
     fn_under_test: str,
     expected: ProtoMessage,
 ):
-    mock_distribution_client.store.get.return_value = FeatureData("test_sha", test_feature_no_constraints)
+    mock_distribution_client.store.get.return_value = ConfigData("test_sha", test_feature_no_constraints)
 
     expected_any = ProtoAny()
     expected_any.Pack(expected)
@@ -79,7 +79,7 @@ def test_get_json(mock_distribution_client, test_feature_no_constraints, expecte
     any_proto = AnyProto()
     any_proto.Pack(expected_value)
 
-    mock_distribution_client.store.get.return_value = FeatureData("test_sha", test_feature_no_constraints)
+    mock_distribution_client.store.get.return_value = ConfigData("test_sha", test_feature_no_constraints)
 
     with mock.patch(
         "lekko_client.clients.distribution_client.evaluate", return_value=EvaluationResult(value=any_proto, path=[1])
@@ -91,7 +91,7 @@ def test_get_proto_by_type(mock_distribution_client, test_feature_no_constraints
     any_proto = AnyProto()
     int_proto = wrappers_pb2.Int32Value(value=10)
     any_proto.Pack(int_proto)
-    mock_distribution_client.store.get.return_value = FeatureData("test_sha", test_feature_no_constraints)
+    mock_distribution_client.store.get.return_value = ConfigData("test_sha", test_feature_no_constraints)
 
     with mock.patch(
         "lekko_client.clients.distribution_client.evaluate", return_value=EvaluationResult(value=any_proto, path=[1])
@@ -103,7 +103,7 @@ def test_get_proto(mock_distribution_client, test_feature_no_constraints):
     any_proto = AnyProto()
     int_proto = wrappers_pb2.Int32Value(value=10)
     any_proto.Pack(int_proto)
-    mock_distribution_client.store.get.return_value = FeatureData("test_sha", test_feature_no_constraints)
+    mock_distribution_client.store.get.return_value = ConfigData("test_sha", test_feature_no_constraints)
 
     with mock.patch(
         "lekko_client.clients.distribution_client.evaluate", return_value=EvaluationResult(value=any_proto, path=[1])

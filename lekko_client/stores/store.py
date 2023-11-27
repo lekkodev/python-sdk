@@ -4,7 +4,7 @@ from hashlib import sha256
 from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
     GetRepositoryContentsResponse,
 )
-from lekko_client.models import FeatureData
+from lekko_client.models import ConfigData
 
 
 class Store(ABC):
@@ -13,7 +13,7 @@ class Store(ABC):
         self._content_hash = ""
 
     @abstractmethod
-    def get(self, namespace: str, config_key: str) -> FeatureData:
+    def get(self, namespace: str, config_key: str) -> ConfigData:
         ...
 
     def load(self, contents: GetRepositoryContentsResponse) -> bool:

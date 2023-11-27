@@ -10,7 +10,7 @@ from google.protobuf.any_pb2 import Any
 from lekko_client.clients import APIClient, SidecarClient
 from lekko_client.exceptions import (
     AuthenticationError,
-    FeatureNotFound,
+    ConfigNotFound,
     MismatchedProtoType,
     MismatchedType,
 )
@@ -168,7 +168,7 @@ def test_errors(test_server_no_interceptor):
     test_server_no_interceptor.mock_async_responses(requests)
 
     client = SidecarClient("owner", "repo", "lekko_apikey123")
-    with pytest.raises(FeatureNotFound):
+    with pytest.raises(ConfigNotFound):
         client.get_bool("key", "namespace", {})
 
     with pytest.raises(MismatchedType):
@@ -201,7 +201,7 @@ def test_proto_errors(test_server_no_interceptor):
     test_server_no_interceptor.mock_async_responses(requests)
 
     client = SidecarClient("owner", "repo", "lekko_apikey123")
-    with pytest.raises(FeatureNotFound):
+    with pytest.raises(ConfigNotFound):
         client.get_proto("key", "namespace", {})
 
     with pytest.raises(MismatchedType):

@@ -14,7 +14,7 @@ class NamespaceNotFound(LekkoRpcError):
     pass
 
 
-class FeatureNotFound(LekkoRpcError):
+class ConfigNotFound(LekkoRpcError):
     pass
 
 
