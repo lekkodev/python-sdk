@@ -18,6 +18,9 @@ class ConfigNotFound(LekkoRpcError):
     pass
 
 
+FeatureNotFound = ConfigNotFound
+
+
 class MismatchedType(LekkoRpcError):
     pass
 
