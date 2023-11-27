@@ -14,11 +14,11 @@ class NamespaceNotFound(LekkoRpcError):
     pass
 
 
-class ConfigNotFound(LekkoRpcError):
+class ConfigNotFoundError(LekkoRpcError):
     pass
 
 
-FeatureNotFound = ConfigNotFound
+FeatureNotFound = ConfigNotFoundError
 
 
 class MismatchedType(LekkoRpcError):

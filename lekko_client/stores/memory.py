@@ -1,6 +1,6 @@
 from typing import Dict
 
-from lekko_client.exceptions import ConfigNotFound, NamespaceNotFound
+from lekko_client.exceptions import ConfigNotFoundError, NamespaceNotFound
 from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
     GetRepositoryContentsResponse,
 )
@@ -19,7 +19,7 @@ class MemoryStore(Store):
             raise NamespaceNotFound(f"Namespace {namespace} not found")
         result = namespace_map.get(config_key)
         if not result:
-            raise ConfigNotFound(f"Config {config_key} not found in namespace {namespace}")
+            raise ConfigNotFoundError(f"Config {config_key} not found in namespace {namespace}")
         return result
 
     def load_impl(self, contents: GetRepositoryContentsResponse) -> bool:
