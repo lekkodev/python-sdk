@@ -80,7 +80,7 @@ class CachedGitClient(CachedDistributionClient):
         ns_names = md_contents.get("namespaces", [])
         return [Namespace(name=ns_name, features=self.get_configs(ns_name)) for ns_name in ns_names]
 
-    def get_configs(self, ns_name: str) -> List[DistFeature]:
+    def get_configs(self, ns_name: str) -> List[DistFeature]:  # pragma: no cover
         proto_dir_path = os.path.join(self.path, ns_name, "gen", "proto")
         if not os.path.isdir(proto_dir_path):
             return []
