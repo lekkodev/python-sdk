@@ -1,10 +1,12 @@
 import glob
+import logging
 import os
 from typing import Any, Dict, List, Optional
 
 import grpc
 import yaml
 from dulwich.errors import NotGitRepository
+from dulwich.index import blob_from_path_and_stat
 from dulwich.object_store import tree_lookup_path
 from dulwich.repo import Repo as GitRepo
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
@@ -22,6 +24,8 @@ from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2 import (
 )
 from lekko_client.gen.lekko.feature.v1beta1.feature_pb2 import Feature
 from lekko_client.stores.store import Store
+
+log = logging.getLogger(__name__)
 
 
 class CachedGitClient(CachedDistributionClient):
@@ -88,9 +92,17 @@ class CachedGitClient(CachedDistributionClient):
         for proto_bin_file in glob.glob(os.path.join(proto_dir_path, "*.proto.bin")):
             proto_bin_relative_filename = os.path.relpath(proto_bin_file, self.path)
             with open(proto_bin_file, "rb") as proto_bin:
-                _, sha = tree_lookup_path(
-                    repo.get_object, repo[repo.head()].tree, proto_bin_relative_filename.encode()  # type: ignore
-                )
+                # Get blob hash from tree if it exists, otherwise compute
+                try:
+                    _, sha = tree_lookup_path(
+                        repo.get_object, repo[repo.head()].tree, proto_bin_relative_filename.encode()  # type: ignore
+                    )
+                except Exception:
+                    try:
+                        sha = blob_from_path_and_stat(proto_bin_file.encode(), os.lstat(proto_bin_file)).id
+                    except Exception:
+                        log.warning(f"Failed to get blob sha for {proto_bin_file}")
+                        continue
                 feature = Feature()
                 feature.ParseFromString(proto_bin.read())
                 features.append(

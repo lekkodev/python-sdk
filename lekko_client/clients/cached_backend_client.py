@@ -81,6 +81,7 @@ class CachedBackendClient(CachedDistributionClient):
             )
         except Exception:
             log.warning("Failed to fetch latest repository version", exc_info=True)
+            return False
         current_sha = self.store.commit_sha
         return current_sha != version_response.commit_sha
 
