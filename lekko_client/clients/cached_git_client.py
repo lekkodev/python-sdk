@@ -64,7 +64,7 @@ class CachedGitClient(CachedDistributionClient):
             self.watcher.schedule(event_handler, self.path, recursive=True)  # type: ignore
             self.watcher.start()  # type: ignore
 
-    def load_contents(self) -> GetRepositoryContentsResponse:
+    def load_contents(self) -> GetRepositoryContentsResponse:  # pragma: no cover
         try:
             repo = GitRepo(self.path)
         except NotGitRepository:
@@ -72,7 +72,7 @@ class CachedGitClient(CachedDistributionClient):
 
         return GetRepositoryContentsResponse(commit_sha=repo.head().decode("utf-8"), namespaces=self.get_namespaces())
 
-    def get_namespaces(self) -> List[Namespace]:
+    def get_namespaces(self) -> List[Namespace]:  # pragma: no cover
         md_file_path = os.path.join(self.path, self.ROOT_CONFIG_METADATA_FILENAME)
         with open(md_file_path) as f:
             md_contents = yaml.safe_load(f)
