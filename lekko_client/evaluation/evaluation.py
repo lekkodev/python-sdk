@@ -27,7 +27,7 @@ class TraverseResult:
 
 def evaluate(config: Feature, namespace: str, context: ClientContext = None) -> EvaluationResult:
     if not config.HasField("tree"):
-        raise EvaluationError("Unable to evaluate feature: config tree is empty")
+        raise EvaluationError("Unable to evaluate config: rule tree is empty")
 
     for i, constraint in enumerate(config.tree.constraints):
         child_result = traverse(constraint, namespace, config.key, context)

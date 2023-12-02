@@ -33,7 +33,7 @@ from lekko_client.gen.lekko.backend.v1beta1.distribution_service_pb2_grpc import
     DistributionServiceStub,
 )
 from lekko_client.helpers import convert_context, get_context_keys, get_grpc_channel
-from lekko_client.models import ClientContext, FeatureData
+from lekko_client.models import ClientContext, ConfigData
 from lekko_client.stores.store import Store
 
 log = logging.getLogger(__name__)
@@ -115,7 +115,7 @@ class CachedDistributionClient(Client):
         self.session_key = ""
         self.events_batcher = None
         if self.api_key:
-            self.initialize_client(credentials)
+            self._client = self.initialize_client(credentials)
             if self._client:
                 self.events_batcher = self.EventsBatcher(
                     self._client, self.session_key, upload_interval_ms=5 * 1_000, batch_size=1_000
@@ -131,18 +131,19 @@ class CachedDistributionClient(Client):
         float: FloatValue,
     }
 
-    def initialize_client(self, credentials: grpc.ChannelCredentials) -> None:
+    def initialize_client(self, credentials: grpc.ChannelCredentials) -> DistributionServiceStub:
         from lekko_client import __version__
 
         channel = get_grpc_channel(self.uri, self.api_key, credentials)
-        self._client = DistributionServiceStub(channel)
+        client = DistributionServiceStub(channel)
         try:
-            register_response = self._client.RegisterClient(
+            register_response = client.RegisterClient(
                 RegisterClientRequest(repo_key=self.repository, sidecar_version=__version__)
             )
         except grpc.RpcError as e:
             raise LekkoRpcError(f"Unable to register distribution service: {e}")
         self.session_key = register_response.session_key
+        return client
 
     @abstractmethod
     def initialize(self) -> None:
@@ -160,7 +161,7 @@ class CachedDistributionClient(Client):
         ...
 
     def track(
-        self, namespace: str, feature_data: FeatureData, result: EvaluationResult, context: Optional[ClientContext]
+        self, namespace: str, config_data: ConfigData, result: EvaluationResult, context: Optional[ClientContext]
     ) -> None:
         if not self.events_batcher:
             return
@@ -170,9 +171,9 @@ class CachedDistributionClient(Client):
         event = FlagEvaluationEvent(
             repo_key=self.repository,
             commit_sha=self.store.commit_sha,
-            feature_sha=feature_data.config_sha,
+            feature_sha=config_data.config_sha,
             namespace_name=namespace,
-            feature_name=feature_data.feature.key,
+            feature_name=config_data.config.key,
             context_keys=get_context_keys(context),
             result_path=result.path,
             client_event_time=timestamp,
@@ -180,10 +181,10 @@ class CachedDistributionClient(Client):
         self.events_batcher.add_event(event)
 
     def get(self, namespace: str, key: str, context: Dict[str, Any]) -> ProtoAny:
-        feature_data = self.store.get(namespace, key)
+        config_data = self.store.get(namespace, key)
         client_context = convert_context(context)
-        result = evaluate(feature_data.feature, namespace, client_context)
-        self.track(namespace, feature_data, result, client_context)
+        result = evaluate(config_data.config, namespace, client_context)
+        self.track(namespace, config_data, result, client_context)
         return result.value
 
     ReturnType = TypeVar("ReturnType", str, float, int, bool)
@@ -193,7 +194,7 @@ class CachedDistributionClient(Client):
         return_wrapper = self._TYPE_MAPPING[typ]()
         if result.Unpack(return_wrapper):
             return return_wrapper.value  # type: ignore
-        raise MismatchedType(f"Feature {key} is of type {result.type_url} and cannot be converted to {typ}")
+        raise MismatchedType(f"Config {key} is of type {result.type_url} and cannot be converted to {typ}")
 
     def get_bool(self, namespace: str, key: str, context: Dict[str, Any]) -> bool:
         return self.get_scalar(namespace, key, context, bool)

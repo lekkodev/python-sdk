@@ -8,6 +8,6 @@ ClientContext = Optional[Dict[str, Value]]
 
 
 @dataclass
-class FeatureData:
+class ConfigData:
     config_sha: str
-    feature: Feature
+    config: Feature

@@ -7,7 +7,7 @@ import grpc
 from google.protobuf.json_format import MessageToDict
 
 import lekko_client
-from lekko_client.exceptions import LekkoError
+from lekko_client.exceptions import ConfigNotFoundError
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(threadName)s - %(levelname)s - %(message)s")
@@ -75,7 +75,7 @@ if __name__ == "__main__":
                     else:
                         val = MessageToDict(lekko_client.get_proto(args.namespace, args.config, {}))
             # print(f"Got {val} for config {args.namespace}/{args.config}")
-        except LekkoError as e:
+        except ConfigNotFoundError as e:
             print(f"Failed to get config: {e}")
             if e.__cause__:
                 print(f"Caused by: {e.__cause__}")

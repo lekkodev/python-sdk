@@ -335,8 +335,9 @@ def mock_distribution_client(mock_store, mock_event_batcher) -> CachedDistributi
             return mock.Mock(spec_set=GetRepositoryContentsResponse)
 
         def initialize_client(self, credentials: grpc.ChannelCredentials):
-            self._client = mock.Mock(spec_set=DistributionServiceStub)
+            _client = mock.Mock(spec_set=DistributionServiceStub)
             self.session_key = "session key"
+            return _client
 
     client = MockDistributionClient("uri", "owner", "repo", mock_store, api_key="api_key")
     return client

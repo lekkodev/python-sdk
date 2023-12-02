@@ -11,7 +11,7 @@ from lekko_client.clients.client import Client
 from lekko_client.constants import LEKKO_API_URL, LEKKO_SIDECAR_URL
 from lekko_client.exceptions import (
     AuthenticationError,
-    FeatureNotFound,
+    ConfigNotFoundError,
     MismatchedProtoType,
     MismatchedType,
 )
@@ -143,7 +143,7 @@ class ConfigServiceClient(Client):
             return response
         except grpc.RpcError as e:
             if e.code() == grpc.StatusCode.NOT_FOUND:
-                raise FeatureNotFound(e.details()) from e
+                raise ConfigNotFoundError(e.details()) from e
             if e.code() == grpc.StatusCode.INVALID_ARGUMENT:
                 raise MismatchedType(e.details()) from e
             raise
@@ -166,7 +166,7 @@ class ConfigServiceClient(Client):
             return response.value
         except grpc.RpcError as e:
             if e.code() == grpc.StatusCode.NOT_FOUND:
-                raise FeatureNotFound(e.details()) from e
+                raise ConfigNotFoundError(e.details()) from e
             if e.code() == grpc.StatusCode.INVALID_ARGUMENT:
                 raise MismatchedType(e.details()) from e
             raise
