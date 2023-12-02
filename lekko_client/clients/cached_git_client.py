@@ -112,7 +112,7 @@ class CachedGitClient(CachedDistributionClient):
 
 
 def _get_blob_sha(path: str) -> bytes:  # pragma: no cover
-    """Finds or computes the blob sha of a file"""
+    """Find or compute the blob sha of a file"""
     sha = blob_from_path_and_stat(path.encode(), os.lstat(path)).id
     if not isinstance(sha, bytes):
         raise LekkoError(f"Unable to compute blob sha of {path}")
