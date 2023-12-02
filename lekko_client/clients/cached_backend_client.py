@@ -79,10 +79,11 @@ class CachedBackendClient(CachedDistributionClient):
             version_response = self._client.GetRepositoryVersion(
                 GetRepositoryVersionRequest(repo_key=self.repository, session_key=self.session_key)
             )
+            current_sha = self.store.commit_sha
+            return current_sha != version_response.commit_sha
         except Exception:
             log.warning("Failed to fetch latest repository version", exc_info=True)
-        current_sha = self.store.commit_sha
-        return current_sha != version_response.commit_sha
+            return False
 
     def close(self) -> None:
         super().close()
