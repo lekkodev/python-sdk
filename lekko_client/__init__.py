@@ -19,7 +19,7 @@ from lekko_client.clients import (
 from lekko_client.constants import LEKKO_API_URL, LEKKO_SIDECAR_URL  # noqa
 from lekko_client.stores.memory import MemoryStore
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
