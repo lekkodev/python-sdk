@@ -181,8 +181,9 @@ class CachedDistributionClient(Client):
         self.events_batcher.add_event(event)
 
     def get(self, namespace: str, key: str, context: Dict[str, Any]) -> ProtoAny:
+        ctx = self.context | context
         config_data = self.store.get(namespace, key)
-        client_context = convert_context(context)
+        client_context = convert_context(ctx)
         result = evaluate(config_data.config, namespace, client_context)
         self.track(namespace, config_data, result, client_context)
         return result.value
